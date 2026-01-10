@@ -37,74 +37,12 @@ def find_customer_by_dni_last4(dni_last4: str, data: Dict[str, Any]) -> Optional
             return c
     return None
 
-def parse_iso_date(s: str) -> Optional[datetime]:
-    """
-    Dialogflow sys.date can return:
-      - '2025-02-01'
-      - '2025-02-15'
-      - sometimes '2025-02' (less common)
-    We'll handle YYYY-MM and YYYY-MM-DD.
-    """
-    if not s:
-        return None
-    s = str(s)
-    try:
-        if len(s) == 7:  # YYYY-MM
-            return datetime.strptime(s, "%Y-%m")
-        return datetime.strptime(s, "%Y-%m-%d")
-    except ValueError:
-        return None
-
-def normalize_period(date_param: Optional[str], month_param: Optional[str]) -> Optional[str]:
-    """
-    Output:
-      - 'YYYY-MM' if year present
-      - 'XXXX-MM' if only month
-      - None if neither provided
-    """
-    # Prefer sys.date if provided and parseable
-    if date_param:
-        dt = parse_iso_date(date_param)
-        if dt:
-            return dt.strftime("%Y-%m")
-
-        # If date_param is directly "YYYY-MM"
-        if isinstance(date_param, str) and len(date_param) == 7 and date_param[4] == "-":
-            return date_param
-
-    # Otherwise month (already '01'..'12')
-    if month_param:
-        mm = str(month_param).zfill(2)
-        if mm.isdigit() and 1 <= int(mm) <= 12:
-            return f"XXXX-{mm}"
-
-    return None
-
 def format_eur(amount: float) -> str:
     # Simple formatting Spanish style (comma decimal)
     return f"{amount:,.2f}€".replace(",", "X").replace(".", ",").replace("X", ".")
 
-def get_invoices_for_customer(customer: Dict[str, Any], data: Dict[str, Any]) -> List[Dict[str, Any]]:
-    user_id = customer.get("user_id")
-    invoices = [i for i in data.get("invoices", []) if i.get("user_id") == user_id]
-    # Sort descending by issue_date then due_date
-    invoices.sort(key=lambda x: (x.get("issue_date", ""), x.get("due_date", "")), reverse=True)
-    return invoices
 
-def invoice_is_unpaid(inv: Dict[str, Any]) -> bool:
-    return inv.get("status") in ("DUE", "OVERDUE")
-
-def list_unpaid_invoices(invoices: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    unpaid = [i for i in invoices if invoice_is_unpaid(i)]
-    # Keep most recent first
-    unpaid.sort(key=lambda x: (x.get("due_date", ""), x.get("issue_date", "")), reverse=True)
-    return unpaid
-
-def build_dialogflow_response(
-    text: str,
-    output_contexts: Optional[List[Dict[str, Any]]] = None,
-    payload: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+def build_dialogflow_response(text: str, output_contexts: Optional[List[Dict[str, Any]]] = None, payload: Optional[Dict[str, Any]] = None ) -> Dict[str, Any]:
     resp: Dict[str, Any] = {"fulfillmentText": text}
     if output_contexts:
         resp["outputContexts"] = output_contexts
@@ -165,21 +103,6 @@ def normalize_cups_last6(value: Optional[str]) -> Optional[str]:
             return value[2:]
         return value
     return None
-
-
-def finalize_identity_contexts(payload, state, ident_ids: dict):
-    session = payload.get("session", "")
-    # ident_ids debería incluir: user_id, cups_id (tus ids internos)
-    new_state = {**state, **ident_ids}
-
-    return [
-        upsert_context(payload, "session_state", new_state, lifespan=10),
-        make_context(session, "ctx_awaiting_identity", 0, {}),   # <-- mata el contexto
-        make_context(session, "ctx_identity_verified", 20, {
-            "user_id": ident_ids.get("user_id"),
-            "cups_id": ident_ids.get("cups_id"),
-        })
-    ]
 
 
 def identify_user(data: Dict[str, Any], params: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
