@@ -11,7 +11,6 @@ INTENTS
     1. Info.NextInvoiceDate --> handle_next_invoice_date
         Comprobamos la próxima fecha de emisión de factura.
 
-
 """
 
 def handle_next_invoice_date(params: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
