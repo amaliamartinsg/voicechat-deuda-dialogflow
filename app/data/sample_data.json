@@ -154,6 +154,7 @@
     { "invoice_id": "FAC-2025-002007", "user_id": 2, "cups_id": 202, "period": "2025-12", "issue_date": "2026-01-06", "due_date": "2026-01-21", "amount": 44.55, "status": "DUE" },
     { "invoice_id": "FAC-2026-002008", "user_id": 2, "cups_id": 202, "period": "2026-01", "issue_date": "2026-02-06", "due_date": "2026-02-21", "amount": 42.35, "status": "OVERDUE" },
 
+    { "invoice_id": "FAC-2026-003000", "user_id": 3, "cups_id": 301, "period": "2025-02", "issue_date": "2026-02-07", "due_date": "2026-02-22", "amount": 61.10, "status": "DUE" },
     { "invoice_id": "FAC-2025-003001", "user_id": 3, "cups_id": 301, "period": "2025-10", "issue_date": "2025-11-07", "due_date": "2025-11-22", "amount": 57.80, "status": "PAID" },
     { "invoice_id": "FAC-2025-003002", "user_id": 3, "cups_id": 301, "period": "2025-11", "issue_date": "2025-12-07", "due_date": "2025-12-22", "amount": 60.25, "status": "PAID" },
     { "invoice_id": "FAC-2025-003003", "user_id": 3, "cups_id": 301, "period": "2025-12", "issue_date": "2026-01-07", "due_date": "2026-01-22", "amount": 63.40, "status": "DUE" },

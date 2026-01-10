@@ -49,7 +49,7 @@ def load_data() -> Dict[str, Any]:
 
 
 AUTH_INTENTS = {"Billing.Info.AccountStatus", "Billing.Info.CheckOutstandingAmount", "Billing.Info.NextInvoiceDate", "Billing.Info.ListUnpaidInvoices",
-                "Billing.SendInvoice.ByMonth", "Billing.SendInvoice.Last",
+                "Billing.SendInvoice.ByMonth", "Billing.SendInvoice.Last", "Billing.SendInvoice.Channel"
                 "Payments.SendLink"}
 RETRY_INTENTS = {
     "Default.FeedBack.Negative",
@@ -322,6 +322,7 @@ INTENT_HANDLERS = {
     
     "Billing.SendInvoice.ByMonth": handle_send_invoice,
     "Billing.SendInvoice.Last": handle_send_invoice,
+    "Billing.SendInvoice.Channel": handle_send_invoice,
     
     "Payments.SendLink": handle_send_payment_link,
 }

@@ -25,6 +25,30 @@ def periodo_a_texto(periodo):
     except Exception:
         return periodo
 
+def texto_a_periodo(texto: str) -> Optional[str]:
+    texto = texto.lower().strip()
+    meses = {
+        "enero": "01", "febrero": "02", "marzo": "03", "abril": "04",
+        "mayo": "05", "junio": "06", "julio": "07", "agosto": "08",
+        "septiembre": "09", "octubre": "10", "noviembre": "11", "diciembre": "12"
+    }
+    mes_num = meses.get(texto)
+    
+    # Si el texto es solo un mes, y estamos en ese mes pero aún no ha terminado, se refiere al año pasado
+    if mes_num:
+        ahora = datetime.now()
+        mes_actual = ahora.month
+        anio_actual = ahora.year
+        if mes_actual < int(mes_num) and ahora.day < 28:
+            # Consideramos que el mes no ha terminado si es antes del día 28
+            return f"{anio_actual - 1}-{mes_num}"
+        return f"{anio_actual}-{mes_num}"
+    if mes_num:
+        return mes_num
+    
+    return None
+
+
 
 def find_customer_by_dni_last4(dni_last4: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     dni_last4 = str(dni_last4).strip().upper()
