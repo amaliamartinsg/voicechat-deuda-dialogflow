@@ -13,18 +13,20 @@ app = FastAPI(title="Dialogflow ES Webhook - Billing Demo", version="1.0.0")
 
 DATA_PATH = os.getenv("BILLING_DATA_PATH", os.path.join(os.path.dirname(__file__), "data", "sample_data.json"))
 
+# Billing.SendInvoice
 from routers.billing.send_invoice import handle_send_invoice
 
+#Billing.Info
+from routers.billing.info import handle_check_account_status, handle_list_unpaid_invoices, handle_check_outstanding_amount
+
 from helpers.aux_functions import (
+    identify_user,
     build_dialogflow_response,
-    format_eur,
-    get_invoices_for_customer,
-    make_context,
-    list_unpaid_invoices,
     find_customer_by_dni_last4,
     get_context_params,
+    make_context,
     upsert_context,
-    identify_user,
+    finalize_identity_contexts
 )
 
 
@@ -48,7 +50,9 @@ def load_data() -> Dict[str, Any]:
 AUTH_INTENTS = {"Billing.CheckAccountStatus", "Billing.CheckOutstandingAmount", "Billing.NextInvoiceDate", "Billing.ListUnpaidInvoices",
                 "Billing.SendInvoice.ByMonth", "Billing.SendInvoice.Last",
                 "Payments.SendLink"}
-BUSINESS_INTENTS = {"Billing.SendInvoice.ByMonth"}
+RETRY_INTENTS = {
+    "Default.Feedback.Negative",
+}
 
 MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 
@@ -83,65 +87,204 @@ def calc_debt_for_supply(data: Dict[str, Any], user_id: Any, cups: Optional[str]
             total += float(inv.get("amount", 0) or 0)
     return total
 
+def execute_intent_handler(payload: Dict[str, Any], data: Dict[str, Any], intent_name: str, handler_params: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Ejecuta un handler por nombre de intent.
+    Devuelve SIEMPRE un dict en formato Dialogflow response.
+    """
+    handler = INTENT_HANDLERS.get(intent_name)
+    if not handler:
+        return build_dialogflow_response(f"El intent '{intent_name}' aún no está conectado al webhook. (Demo)")
+
+    try:
+        result = handler(params=handler_params, data=data)
+
+        # Tus handlers a veces devuelven dict, y handle_send_invoice devuelve (mensaje, params).
+        if isinstance(result, tuple) and len(result) == 2:
+            msg, returned_params = result
+            # Devolvemos el mensaje como response DF, y dejamos params para contextos
+            # (el caller montará contextos)
+            return {"_message": str(msg), "_params": returned_params}
+
+        if isinstance(result, dict):
+            # Si ya viene como build_dialogflow_response
+            return {"_df": result, "_params": handler_params}
+
+        # Fallback por si algún handler devuelve string
+        return {"_message": str(result), "_params": handler_params}
+
+    except Exception:
+        return build_dialogflow_response("Ha ocurrido un error procesando tu solicitud. ¿Puedes intentarlo de nuevo?")
+
+
+def _normalize_identity_params(params: Dict[str, Any], state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Normaliza DNI/CUPS de Dialogflow params a tus claves internas:
+      - DNI (solo últimos 4 dígitos + letra)
+      - CUPS (solo 6 dígitos)
+    """
+    dni = (params.get("DNI") or state.get("dni_last4") or "").strip().upper()
+    cups = (params.get("CUPS") or state.get("cups_last6") or "").strip().upper()
+
+    # cups_last6: si viene ES000005 guardamos "000005"
+    cups_last6 = ""
+    if cups:
+        if cups.startswith("ES") and len(cups) >= 8:
+            cups_last6 = cups[-6:]
+        elif re.fullmatch(r"\d{6}", cups):
+            cups_last6 = cups
+        else:
+            # Si no cuadra, lo dejamos tal cual (tu identify_user decidirá si es válido)
+            cups_last6 = cups
+
+    merged = dict(state)
+    if dni:
+        merged["DNI"] = dni
+    if cups_last6:
+        merged["CUPS"] = cups_last6
+
+    return merged
+
 
 def handle_business_intents(payload: Dict[str, Any], data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    payload["_data"] = data
-
+    """
+    Maneja intents que requieren autenticación en webhook.
+    - Guarda pending_action/pending_params cuando falta identidad.
+    - En Auth.ProvideIdentity, al completar identidad, ejecuta pending_action.
+    """
     query_result = payload.get("queryResult", {}) or {}
     intent = (query_result.get("intent") or {}).get("displayName", "")
     params = query_result.get("parameters", {}) or {}
 
-    state = get_context_params(payload, "session_state")
+    session = payload.get("session", "")
+
+    state = get_context_params(payload, "session_state") or {}
+    state = _normalize_identity_params(params, state)
+
     pending_action = state.get("pending_action")
     pending_params = state.get("pending_params") or {}
 
-    status, ident = identify_user(payload)
+    print("[handle_business_intents] Intent detectado:", intent)
+    print("[handle_business_intents] Parámetros recibidos:", params)
+    print("[handle_business_intents] Estado de sesión:", state)
+    print("[handle_business_intents] Acción pendiente:", pending_action)
+    print("[handle_business_intents] Parámetros pendientes:", pending_params)
 
-    def build_state_response(text: str, updates: Dict[str, Any], lifespan: int = 5) -> Dict[str, Any]:
-        merged = dict(state)
-        merged.update({k: v for k, v in updates.items() if v is not None})
-        ctx = [upsert_context(payload, "session_state", merged, lifespan=lifespan)]
-        return build_dialogflow_response(text, output_contexts=ctx)
+    # RETRY: reintentar manteniendo estado
+    if intent in RETRY_INTENTS:
+        # Decide qué reintentar
+        action_to_run = state.get("pending_action") or state.get("last_action")
+        action_params = state.get("pending_params") or state.get("last_params") or {}
 
+        if not action_to_run:
+            ctx = [upsert_context(payload, "session_state", state, lifespan=10)]
+            return build_dialogflow_response(
+                "Entendido. ¿Qué estabas intentando hacer exactamente (por ejemplo: “enviar la última factura”)?",
+                output_contexts=ctx
+            )
+    
+    if intent not in AUTH_INTENTS and intent != "Auth.ProvideIdentity":
+        return None
+    
 
-    def execute_intent_handler(intent_name: str, handler_params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        handler = INTENT_HANDLERS.get(intent_name)
-        if not handler:
-            return build_dialogflow_response(f"El intent '{intent_name}' aún no está conectado al webhook. (Demo)")
-        # El handler espera (session, params, data)
-        session = payload.get("session", "")
-        try:
-            return handler(session=session, params=handler_params, data=data)
-        except Exception:
-            return build_dialogflow_response("Ha ocurrido un error procesando tu solicitud. ¿Puedes intentarlo de nuevo?")
+    status, ident = identify_user(data, {**state, **params})
+    print("[handle_business_intents] Resultado de identify_user:", status, ident)
 
-    if pending_action and status == "OK":
-        # Enriquecer los parámetros con los identificados
-        enriched_params = dict(pending_params)
-        if isinstance(ident, dict):
-            enriched_params.update({k: v for k, v in ident.items() if v is not None})
-        return execute_intent_handler(pending_action, enriched_params)
+    if status == "NEED_DNI":
+        if intent != "Auth.ProvideIdentity" and intent in AUTH_INTENTS:
+            state["pending_action"] = intent
+            state["pending_params"] = dict(params)
 
+        ctx = [
+            upsert_context(payload, "session_state", state, lifespan=5),
+            make_context(session, "ctx_awaiting_identity", 3, {"expected": "DNI"}),
+        ]
+        print("[handle_business_intents] Falta DNI. Contextos devueltos:", ctx)
+        return build_dialogflow_response(
+            "Por favor, dime los últimos 4 dígitos y la letra del DNI del titular.",
+            output_contexts=ctx
+        )
 
-    if intent in AUTH_INTENTS:
-        if status != "OK":
-            updates = {
-                "pending_action": intent,
-                "pending_params": params,
-                "auth_level": "basic",
-                "dni_last4": params.get("DNI") or params.get("dni_last4"),
-                "cups_last6": params.get("CUPS") or state.get("cups_last6"),
-            }
-            return build_state_response(ident.get("message", "Necesito mas datos para continuar."), updates)
+    if status == "NEED_CUPS":
+        if intent != "Auth.ProvideIdentity" and intent in AUTH_INTENTS:
+            state["pending_action"] = intent
+            state["pending_params"] = dict(params)
 
-        # Enriquecer los parámetros originales con los identificados
-        enriched_params = dict(params)
-        if isinstance(ident, dict):
-            enriched_params.update({k: v for k, v in ident.items() if v is not None})
-        return execute_intent_handler(intent, enriched_params)
+        ctx = [
+            upsert_context(payload, "session_state", state, lifespan=5),
+            make_context(session, "ctx_awaiting_identity", 3, {"expected": "CUPS"}),
+        ]
+        print("[handle_business_intents] Falta CUPS. Contextos devueltos:", ctx)
+        return build_dialogflow_response(
+            "Para poder identificar el suministro, necesitaré ES + los 6 últimos dígitos del CUPS (por ejemplo: ES123456).",
+            output_contexts=ctx
+        )
 
-    return None
+    enriched_params = dict(params)
+    if isinstance(ident, dict):
+        for k, v in ident.items():
+            if v is not None:
+                enriched_params[k] = v
+    print("[handle_business_intents] Parámetros enriquecidos:", enriched_params)
 
+    action_to_run = None
+    action_params = None
+
+    if intent == "Auth.ProvideIdentity" and pending_action:
+        action_to_run = pending_action
+        action_params = dict(pending_params or {})
+        action_params.update({k: enriched_params.get(k) for k in ("user_id", "cups_id") if enriched_params.get(k) is not None})
+        print(f"[handle_business_intents] Ejecutando acción pendiente: {action_to_run} con params: {action_params}")
+    else:
+        action_to_run = intent
+        action_params = enriched_params
+        print(f"[handle_business_intents] Ejecutando intent actual: {action_to_run} con params: {action_params}")
+
+    result = execute_intent_handler(payload, data, action_to_run, action_params)
+
+    if isinstance(result, dict) and "_df" in result:
+        state.pop("pending_action", None)
+        state.pop("pending_params", None)
+
+        ctx = [
+            upsert_context(payload, "session_state", state, lifespan=10),
+            make_context(session, "ctx_awaiting_identity", 0, {}),
+            make_context(session, "ctx_identity_verified", 20, {
+                "user_id": enriched_params.get("user_id"),
+                "cups_id": enriched_params.get("cups_id"),
+            }),
+        ]
+        print("[handle_business_intents] Respuesta directa del handler (error o especial):", result["_df"])
+        print("[handle_business_intents] Contextos devueltos:", ctx)
+        df_resp = result["_df"]
+        df_resp["outputContexts"] = ctx
+        return df_resp
+
+    output_msg = result.get("_message", "")
+    returned_params = result.get("_params", {}) or {}
+
+    state["last_action"] = action_to_run
+    state["last_params"] = action_params
+
+    if intent == "Auth.ProvideIdentity" and pending_action:
+        state.pop("pending_action", None)
+        state.pop("pending_params", None)
+
+    verified_payload = {}
+    if enriched_params.get("user_id") is not None and enriched_params.get("cups_id") is not None:
+        verified_payload = {"user_id": enriched_params.get("user_id"), "cups_id": enriched_params.get("cups_id")}
+
+    ctx = [
+        upsert_context(payload, "session_state", {**state, **returned_params}, lifespan=10),
+        make_context(session, "ctx_awaiting_identity", 0, {}),
+    ]
+    if verified_payload:
+        ctx.append(make_context(session, "ctx_identity_verified", 20, verified_payload))
+
+    print("[handle_business_intents] Mensaje de salida:", output_msg)
+    print("[handle_business_intents] Contextos devueltos:", ctx)
+
+    return build_dialogflow_response(output_msg, output_contexts=ctx)
 
 
 def require_dni_or_prompt(params: Dict[str, Any]) -> Tuple[Optional[str], Optional[str]]:
@@ -150,27 +293,6 @@ def require_dni_or_prompt(params: Dict[str, Any]) -> Tuple[Optional[str], Option
         return None, "Para continuar necesito verificar al titular. Dime los últimos 4 dígitos del DNI."
     return str(dni).strip(), None
 
-def handle_check_outstanding_amount(session: str, params: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
-    dni, prompt = require_dni_or_prompt(params)
-    if prompt:
-        ctx = [make_context(session, "awaiting_identity", 5)]
-        return build_dialogflow_response(prompt, output_contexts=ctx)
-
-    customer = find_customer_by_dni_last4(dni, data)
-    if not customer:
-        return build_dialogflow_response("No he encontrado el titular con ese DNI. ¿Puedes repetir los últimos 4 dígitos?")
-
-    invoices = get_invoices_for_customer(customer, data)
-    unpaid = list_unpaid_invoices(invoices)
-    total_due = sum(float(i["amount"]) for i in unpaid) if unpaid else 0.0
-
-    if not unpaid:
-        text = "No tienes importe pendiente ✅"
-    else:
-        text = f"Tu importe pendiente total es {format_eur(total_due)} ({len(unpaid)} factura(s))."
-
-    ctx = [make_context(session, "identity_verified", 10, {"dni_last4": dni})]
-    return build_dialogflow_response(text, output_contexts=ctx)
 
 def handle_next_invoice_date(session: str, params: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
     
@@ -206,14 +328,17 @@ def handle_send_payment_link(session: str, params: Dict[str, Any], data: Dict[st
 # Intent routing
 # -----------------------------
 INTENT_HANDLERS = {
-    # "Billing.ListUnpaidInvoices": handle_list_unpaid_invoices,
     "Billing.NextInvoiceDate": handle_next_invoice_date,
     "Payments.SendLink": handle_send_payment_link,
     
+    "Billing.Info.UnpaidInvoices": handle_list_unpaid_invoices,
     "Billing.Info.OutstandingAmount": handle_check_outstanding_amount,
-    # "Billing.Info.AccountStatus": handle_check_account_status,
+    "Billing.Info.AccountStatus": handle_check_account_status,
+    
     "Billing.SendInvoice.ByMonth": handle_send_invoice,
     "Billing.SendInvoice.Last": handle_send_invoice,
+    
+    "Default.FeedBack.Negative": handle_send_invoice #! retry last action
 }
 
 @app.post("/dialogflow/webhook")
@@ -221,15 +346,12 @@ INTENT_HANDLERS = {
 async def dialogflow_fulfillment(request: Request) -> JSONResponse:
     body = await request.json()
     
-    print("\n\n\nBody recibido desde Dialogflow:", body)  # Esto lo verás en la consola
+    print("\n\n\n body = ", body)  # Esto lo verás en la consola
 
     session = body.get("session", "")
     query_result = body.get("queryResult", {}) or {}
     intent = (query_result.get("intent") or {}).get("displayName", "")
     params = query_result.get("parameters", {}) or {}
-
-    print("\n\nIntent detectado:", intent)
-    print("\nParámetros:", params)
 
     data = load_data()
 

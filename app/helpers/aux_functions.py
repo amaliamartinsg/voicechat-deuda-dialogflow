@@ -6,7 +6,6 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 
-
 # Convertir el periodo (YYYY-MM) a "mes de año" en español
 locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
 def periodo_a_texto(periodo):
@@ -25,8 +24,6 @@ def periodo_a_texto(periodo):
         return f"{mes_nombre} de {anio}"
     except Exception:
         return periodo
-
-
 
 
 def find_customer_by_dni_last4(dni_last4: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -150,6 +147,8 @@ CUPS_PARTIAL_RE = re.compile(r"^(ES)?[A-Za-z0-9]{6}$")
 def normalize_dni_partial(value: Optional[str]) -> Optional[str]:
     if not value:
         return None
+    if value == '-':
+        return None
     value = str(value).strip().upper()
     if DNI_PARTIAL_RE.match(value):
         return value
@@ -158,6 +157,8 @@ def normalize_dni_partial(value: Optional[str]) -> Optional[str]:
 def normalize_cups_last6(value: Optional[str]) -> Optional[str]:
     if not value:
         return None
+    if value == '-':
+        return None
     value = str(value).strip().upper()
     if CUPS_PARTIAL_RE.match(value):
         if value.startswith("ES"):
@@ -165,31 +166,40 @@ def normalize_cups_last6(value: Optional[str]) -> Optional[str]:
         return value
     return None
 
-def identify_user(payload: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
+
+def finalize_identity_contexts(payload, state, ident_ids: dict):
+    session = payload.get("session", "")
+    # ident_ids debería incluir: user_id, cups_id (tus ids internos)
+    new_state = {**state, **ident_ids}
+
+    return [
+        upsert_context(payload, "session_state", new_state, lifespan=10),
+        make_context(session, "ctx_awaiting_identity", 0, {}),   # <-- mata el contexto
+        make_context(session, "ctx_identity_verified", 20, {
+            "user_id": ident_ids.get("user_id"),
+            "cups_id": ident_ids.get("cups_id"),
+        })
+    ]
+
+
+def identify_user(data: Dict[str, Any], params: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
     """
     status:
       - OK: user_id + cups_id resueltos
       - NEED_DNI: falta dni parcial
       - NEED_CUPS: usuario con multiples suministros y falta cups_last6
     """
-    data = payload.get("_data", {})
-    params = payload.get("queryResult", {}).get("parameters", {}) or {}
-    state = get_context_params(payload, "session_state")
-
-    user_id = state.get("user_id")
-    cups_id = state.get("cups_id")
+    user_id = params.get("user_id")
+    cups_id = params.get("cups_id")
     if user_id and cups_id:
         return "OK", {"user_id": user_id, "cups_id": cups_id}
 
-    print("DNI parcial recibido:", params.get("DNI") or params.get("dni_last4"))
-    print("CUPS ultimos 6 recibido:", params.get("CUPS") or state.get("cups_last6"))
+    dni_original = params.get("DNI") or params.get("dni_last4")
+    cups_original = params.get("CUPS") or params.get("cups_last6")
 
-    dni_last4 = normalize_dni_partial(params.get("DNI") or params.get("dni_last4"))
-    cups_last6 = normalize_cups_last6(params.get("CUPS") or state.get("cups_last6"))
+    dni_last4 = normalize_dni_partial(dni_original)
+    cups_last6 = normalize_cups_last6(cups_original)
     
-    print("\n\nDNI parcial normalizado:", dni_last4)
-    print("CUPS ultimos 6 normalizado:", cups_last6)
-
     if not dni_last4:
         return "NEED_DNI", {
             "message": "Para continuar necesito los ultimos 4 digitos y letra del DNI (ej: 5678Z)."
@@ -205,7 +215,7 @@ def identify_user(payload: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
     supplies = [s for s in data.get("supplies", []) if s.get("user_id") == user_id]
 
     if len(supplies) == 1:
-        return "OK", {"user_id": user_id, "cups_id": supplies[0].get("cups_id"), "dni_last4": dni_last4}
+        return "OK", {"user_id": user_id, "cups_id": supplies[0].get("cups_id")}
 
     if not cups_last6:
         return "NEED_CUPS", {
@@ -229,5 +239,4 @@ def identify_user(payload: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
     return "OK", {
         "user_id": user_id,
         "cups_id": supply.get("cups_id"),
-        "dni_last4": dni_last4,
     }
