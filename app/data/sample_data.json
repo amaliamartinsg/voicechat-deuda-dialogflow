@@ -51,14 +51,14 @@
   ],
   "supplies": [
     {
-      "id_cups": 101,
+      "cups_id": 101,
       "user_id": 1,
       "cups": "ES12A1B2C3D4E5F6G7",
       "address": "C/ Mayor 10, Madrid",
       "alias": "Casa"
     },
     {
-      "id_cups": 102,
+      "cups_id": 102,
       "user_id": 1,
       "cups": "ES34H7J8K9L0M1N2P3",
       "address": "Av. Sol 25, Madrid",
@@ -66,14 +66,14 @@
     },
 
     {
-      "id_cups": 201,
+      "cups_id": 201,
       "user_id": 2,
       "cups": "ES56Q1W2E3R4T5Y6U7",
       "address": "C/ Toledo 5, Toledo",
       "alias": "Vivienda"
     },
     {
-      "id_cups": 202,
+      "cups_id": 202,
       "user_id": 2,
       "cups": "ES78I9O0P1A2S3D4F5",
       "address": "C/ Río 3, Toledo",
@@ -81,7 +81,7 @@
     },
 
     {
-      "id_cups": 301,
+      "cups_id": 301,
       "user_id": 3,
       "cups": "ES90G1H2J3K4L5Z6X7",
       "address": "C/ Cervantes 12, Valencia",
@@ -89,21 +89,21 @@
     },
 
     {
-      "id_cups": 401,
+      "cups_id": 401,
       "user_id": 4,
       "cups": "ES11C2V3B4N5M6A7S8",
       "address": "C/ Luna 7, Sevilla",
       "alias": "Casa"
     },
     {
-      "id_cups": 402,
+      "cups_id": 402,
       "user_id": 4,
       "cups": "ES22D3F4G5H6J7K8L9",
       "address": "C/ Triana 18, Sevilla",
       "alias": "Local"
     },
     {
-      "id_cups": 403,
+      "cups_id": 403,
       "user_id": 4,
       "cups": "ES33Z9X8C7V6B5N4M3",
       "address": "C/ Alameda 2, Sevilla",
@@ -111,14 +111,14 @@
     },
 
     {
-      "id_cups": 501,
+      "cups_id": 501,
       "user_id": 5,
       "cups": "ES44P0O9I8U7Y6T5R4",
       "address": "C/ Granada 9, Granada",
       "alias": "Piso"
     },
     {
-      "id_cups": 502,
+      "cups_id": 502,
       "user_id": 5,
       "cups": "ES55L1K2J3H4G5F6D7",
       "address": "C/ Sierra 4, Granada",
@@ -126,14 +126,14 @@
     },
 
     {
-      "id_cups": 601,
+      "cups_id": 601,
       "user_id": 6,
       "cups": "ES66Q7W8E9R0T1Y2U3",
       "address": "C/ Marina 1, Barcelona",
       "alias": "Vivienda"
     },
     {
-      "id_cups": 602,
+      "cups_id": 602,
       "user_id": 6,
       "cups": "ES77A8S9D0F1G2H3J4",
       "address": "C/ Diagonal 100, Barcelona",

@@ -1,7 +1,4 @@
 from typing import Any, Dict, Optional
-import calendar
-import locale
-import datetime
 
 from helpers.aux_functions import (
     build_dialogflow_response,
@@ -51,30 +48,19 @@ def _get_supply_for_user(data: Dict[str, Any], user_id: Any, cups_last6: Optiona
 
 
 def handle_send_invoice(session: str, params: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
-    dni = params.get("DNI") or params.get("dni_last4")
-    if not dni:
-        ctx = [make_context(session, "awaiting_identity", 5)]
-        return build_dialogflow_response(
-            "Para continuar necesito los ultimos 4 digitos y letra del DNI.",
-            output_contexts=ctx,
-        )
+    
+    print("\n\nParametros recibidos en SendInvoice (handle_send_invoice):", params)
+    
+    if not params.get("user_id"):
+        return build_dialogflow_response("No hemos podido identificar el suministro. Por favor, vuelva a intentarlo más tarde.")
+    
+    if not params.get("cups_id"):
+        return build_dialogflow_response("No hemos podido identificarlo. Por favor, vuelva a intentarlo más tarde.")
+    
 
-    customer = find_customer_by_dni_last4(str(dni), data)
-    if not customer:
-        return build_dialogflow_response("No he encontrado ningun cliente con ese DNI. Puedes revisarlo?")
-
-    user_id = customer.get("user_id")
-    cups_last6 = _normalize_cups_last6(params.get("cups_last6") or params.get("CUPS"))
-    supply = _get_supply_for_user(data, user_id, cups_last6)
-    if not supply:
-        ctx = [make_context(session, "awaiting_supply", 5, {"dni_last4": dni})]
-        return build_dialogflow_response(
-            "Tienes varios suministros. Indica el CUPS (ES + 6 caracteres) o los ultimos 6 caracteres.",
-            output_contexts=ctx,
-        )
-
-    cups = supply.get("cups")
-    invoices = [i for i in data.get("invoices", []) if i.get("user_id") == user_id and i.get("cups") == cups]
+    cups_id = params.get("cups_id")
+    user_id = params.get("user_id")
+    invoices = [i for i in data.get("invoices", []) if i.get("user_id") == user_id and i.get("cups") == cups_id]
     invoices.sort(key=lambda x: (x.get("issue_date", ""), x.get("due_date", "")), reverse=True)
 
     period = params.get("period") or params.get("month")
@@ -95,15 +81,14 @@ def handle_send_invoice(session: str, params: Dict[str, Any], data: Dict[str, An
         )
 
     link = f"https://pagos.demo.local/factura/{invoice['invoice_id']}"
-    total = format_eur(float(invoice["amount"]))
-    mensaje = f"{mensaje}\n Link: {link}"
+    mensaje = f"{mensaje}\n Puede descargarla a través del siguiente link: {link}"
 
     ctx = [
         make_context(
             session,
             "identity_verified",
             10,
-            {"dni_last4": dni, "period": period, "id_cups": supply.get("id_cups")},
+            {"user_id": user_id, "cups_id": cups_id, "period": period},
         )
     ]
     return build_dialogflow_response(mensaje, output_contexts=ctx)

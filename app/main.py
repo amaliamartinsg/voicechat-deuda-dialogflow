@@ -62,24 +62,24 @@ def normalize_month(value: Any) -> Any:
     return None
 
 
-def get_supply_by_id(data: Dict[str, Any], id_cups: Any) -> Optional[Dict[str, Any]]:
+def get_supply_by_id(data: Dict[str, Any], cups_id: Any) -> Optional[Dict[str, Any]]:
     for s in data.get("supplies", []):
-        if s.get("id_cups") == id_cups:
+        if s.get("cups_id") == cups_id:
             return s
     return None
 
 
-def find_invoice_for_period(data: Dict[str, Any], id_user: Any, cups: Optional[str], period: str) -> Optional[Dict[str, Any]]:
+def find_invoice_for_period(data: Dict[str, Any], user_id: Any, cups: Optional[str], period: str) -> Optional[Dict[str, Any]]:
     for inv in data.get("invoices", []):
-        if inv.get("user_id") == id_user and inv.get("cups") == cups and inv.get("period") == period:
+        if inv.get("user_id") == user_id and inv.get("cups") == cups and inv.get("period") == period:
             return inv
     return None
 
 
-def calc_debt_for_supply(data: Dict[str, Any], id_user: Any, cups: Optional[str]) -> float:
+def calc_debt_for_supply(data: Dict[str, Any], user_id: Any, cups: Optional[str]) -> float:
     total = 0.0
     for inv in data.get("invoices", []):
-        if inv.get("user_id") == id_user and inv.get("cups") == cups and inv.get("status") in ("DUE", "OVERDUE"):
+        if inv.get("user_id") == user_id and inv.get("cups") == cups and inv.get("status") in ("DUE", "OVERDUE"):
             total += float(inv.get("amount", 0) or 0)
     return total
 
@@ -103,75 +103,42 @@ def handle_business_intents(payload: Dict[str, Any], data: Dict[str, Any]) -> Op
         ctx = [upsert_context(payload, "session_state", merged, lifespan=lifespan)]
         return build_dialogflow_response(text, output_contexts=ctx)
 
-    def execute_action(action: str, action_params: Dict[str, Any]) -> Dict[str, Any]:
-        id_user = ident.get("id_user") or state.get("id_user")
-        id_cups = ident.get("id_cups") or state.get("id_cups")
-        base_updates = {
-            "id_user": id_user,
-            "id_cups": id_cups,
-            "auth_level": "basic",
-        }
 
-        if action == "ConsultarFactura":
-            month = normalize_month(action_params.get("month"))
-            if not month:
-                updates = {**base_updates, "pending_action": "ConsultarFactura", "pending_params": {}}
-                return build_state_response("Indica el mes en formato YYYY-MM para consultar la factura.", updates)
-
-            supply = get_supply_by_id(data, id_cups)
-            cups = supply.get("cups") if supply else None
-            invoice = find_invoice_for_period(data, id_user, cups, month)
-            if not invoice:
-                text = f"No encuentro factura para {month}. Quieres consultar otro mes?"
-            else:
-                link = f"https://pagos.demo.local/factura/{invoice['invoice_id']}"
-                text = (
-                    f"Factura {month}: importe {format_eur(float(invoice['amount']))}, fecha {invoice['issue_date']}, "
-                    f"estado {invoice['status']}. Link: {link}"
-                )
-            updates = {**base_updates, "pending_action": "", "pending_params": {}}
-            return build_state_response(text, updates)
-
-        if action == "ConsultarDeuda":
-            supply = get_supply_by_id(data, id_cups)
-            cups = supply.get("cups") if supply else None
-            total = calc_debt_for_supply(data, id_user, cups)
-            if total <= 0:
-                text = "No tienes deuda pendiente en este suministro."
-            else:
-                text = f"Tienes una deuda pendiente de {format_eur(total)}."
-            updates = {**base_updates, "pending_action": "", "pending_params": {}}
-            return build_state_response(text, updates)
-
-        if action == "EnviarLinkPago":
-            link = f"https://pagos.demo.local/pago?u={id_user}&c={id_cups}"
-            text = f"Aqui tienes tu link de pago: {link}"
-            updates = {**base_updates, "pending_action": "", "pending_params": {}}
-            return build_state_response(text, updates)
-
-        updates = {**base_updates, "pending_action": "", "pending_params": {}}
-        return build_state_response("No puedo procesar esa accion ahora.", updates)
+    def execute_intent_handler(intent_name: str, handler_params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        handler = INTENT_HANDLERS.get(intent_name)
+        if not handler:
+            return build_dialogflow_response(f"El intent '{intent_name}' aún no está conectado al webhook. (Demo)")
+        # El handler espera (session, params, data)
+        session = payload.get("session", "")
+        try:
+            return handler(session=session, params=handler_params, data=data)
+        except Exception:
+            return build_dialogflow_response("Ha ocurrido un error procesando tu solicitud. ¿Puedes intentarlo de nuevo?")
 
     if pending_action and status == "OK":
-        return execute_action(pending_action, pending_params)
+        # Enriquecer los parámetros con los identificados
+        enriched_params = dict(pending_params)
+        if isinstance(ident, dict):
+            enriched_params.update({k: v for k, v in ident.items() if v is not None})
+        return execute_intent_handler(pending_action, enriched_params)
 
-    if intent in BUSINESS_INTENTS:
+
+    if intent in AUTH_INTENTS:
         if status != "OK":
-            pending_params = {}
-            if intent == "ConsultarFactura":
-                month = normalize_month(params.get("month"))
-                if month:
-                    pending_params["month"] = month
             updates = {
                 "pending_action": intent,
-                "pending_params": pending_params,
+                "pending_params": params,
                 "auth_level": "basic",
                 "dni_last4": params.get("DNI") or params.get("dni_last4"),
                 "cups_last6": params.get("CUPS") or state.get("cups_last6"),
             }
             return build_state_response(ident.get("message", "Necesito mas datos para continuar."), updates)
 
-        return execute_action(intent, params)
+        # Enriquecer los parámetros originales con los identificados
+        enriched_params = dict(params)
+        if isinstance(ident, dict):
+            enriched_params.update({k: v for k, v in ident.items() if v is not None})
+        return execute_intent_handler(intent, enriched_params)
 
     return None
 
@@ -182,53 +149,6 @@ def require_dni_or_prompt(params: Dict[str, Any]) -> Tuple[Optional[str], Option
     if dni is None or str(dni).strip() == "":
         return None, "Para continuar necesito verificar al titular. Dime los últimos 4 dígitos del DNI."
     return str(dni).strip(), None
-
-def handle_check_account_status(session: str, params: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
-    dni, prompt = require_dni_or_prompt(params)
-    if prompt:
-        # Ask for dni, keep context awaiting_identity
-        ctx = [make_context(session, "awaiting_identity", 5)]
-        return build_dialogflow_response(prompt, output_contexts=ctx)
-
-    customer = find_customer_by_dni_last4(dni, data)
-    if not customer:
-        return build_dialogflow_response("No he encontrado ningún cliente con esos datos. ¿Puedes revisar los últimos 4 dígitos del DNI?")
-
-    invoices = get_invoices_for_customer(customer, data)
-    unpaid = list_unpaid_invoices(invoices)
-    total_due = sum(float(i["amount"]) for i in unpaid) if unpaid else 0.0
-
-    if not unpaid:
-        text = "Estás al corriente de pago ✅ No tienes facturas pendientes."
-    else:
-        text = f"Tienes {len(unpaid)} factura(s) pendiente(s) por un total de {format_eur(total_due)}."
-    ctx = [make_context(session, "identity_verified", 10, {"dni_last4": dni})]
-    return build_dialogflow_response(text, output_contexts=ctx)
-
-def handle_list_unpaid_invoices(session: str, params: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
-    dni, prompt = require_dni_or_prompt(params)
-    if prompt:
-        ctx = [make_context(session, "awaiting_identity", 5)]
-        return build_dialogflow_response(prompt, output_contexts=ctx)
-
-    customer = find_customer_by_dni_last4(dni, data)
-    if not customer:
-        return build_dialogflow_response("No he podido validar el titular con esos datos. ¿Me dices de nuevo los últimos 4 dígitos del DNI?")
-
-    invoices = get_invoices_for_customer(customer, data)
-    unpaid = list_unpaid_invoices(invoices)
-
-    if not unpaid:
-        text = "No tienes facturas pendientes ✅"
-    else:
-        # List max 3 for brevity
-        lines = []
-        for inv in unpaid[:3]:
-            lines.append(f"- {inv['period']} | {format_eur(float(inv['amount']))} | vence {inv['due_date']} | {inv['status']}")
-        text = "Estas son tus facturas pendientes (máx. 3):\n" + "\n".join(lines)
-
-    ctx = [make_context(session, "identity_verified", 10, {"dni_last4": dni})]
-    return build_dialogflow_response(text, output_contexts=ctx)
 
 def handle_check_outstanding_amount(session: str, params: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
     dni, prompt = require_dni_or_prompt(params)
@@ -286,11 +206,12 @@ def handle_send_payment_link(session: str, params: Dict[str, Any], data: Dict[st
 # Intent routing
 # -----------------------------
 INTENT_HANDLERS = {
-    "Billing.CheckAccountStatus": handle_check_account_status,
-    "Billing.ListUnpaidInvoices": handle_list_unpaid_invoices,
-    "Billing.CheckOutstandingAmount": handle_check_outstanding_amount,
+    # "Billing.ListUnpaidInvoices": handle_list_unpaid_invoices,
     "Billing.NextInvoiceDate": handle_next_invoice_date,
     "Payments.SendLink": handle_send_payment_link,
+    
+    "Billing.Info.OutstandingAmount": handle_check_outstanding_amount,
+    # "Billing.Info.AccountStatus": handle_check_account_status,
     "Billing.SendInvoice.ByMonth": handle_send_invoice,
     "Billing.SendInvoice.Last": handle_send_invoice,
 }

@@ -168,7 +168,7 @@ def normalize_cups_last6(value: Optional[str]) -> Optional[str]:
 def identify_user(payload: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
     """
     status:
-      - OK: id_user + id_cups resueltos
+      - OK: user_id + cups_id resueltos
       - NEED_DNI: falta dni parcial
       - NEED_CUPS: usuario con multiples suministros y falta cups_last6
     """
@@ -176,10 +176,10 @@ def identify_user(payload: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
     params = payload.get("queryResult", {}).get("parameters", {}) or {}
     state = get_context_params(payload, "session_state")
 
-    id_user = state.get("id_user")
-    id_cups = state.get("id_cups")
-    if id_user and id_cups:
-        return "OK", {"id_user": id_user, "id_cups": id_cups}
+    user_id = state.get("user_id")
+    cups_id = state.get("cups_id")
+    if user_id and cups_id:
+        return "OK", {"user_id": user_id, "cups_id": cups_id}
 
     print("DNI parcial recibido:", params.get("DNI") or params.get("dni_last4"))
     print("CUPS ultimos 6 recibido:", params.get("CUPS") or state.get("cups_last6"))
@@ -201,15 +201,15 @@ def identify_user(payload: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
             "message": "No encuentro ese DNI parcial. Puedes revisarlo y repetirlo?"
         }
 
-    id_user = customer.get("user_id")
-    supplies = [s for s in data.get("supplies", []) if s.get("user_id") == id_user]
+    user_id = customer.get("user_id")
+    supplies = [s for s in data.get("supplies", []) if s.get("user_id") == user_id]
 
     if len(supplies) == 1:
-        return "OK", {"id_user": id_user, "id_cups": supplies[0].get("id_cups"), "dni_last4": dni_last4}
+        return "OK", {"user_id": user_id, "cups_id": supplies[0].get("cups_id"), "dni_last4": dni_last4}
 
     if not cups_last6:
         return "NEED_CUPS", {
-            "id_user": id_user,
+            "user_id": user_id,
             "message": "Tienes varios suministros. Indica el CUPS (ES + 6 caracteres) o los ultimos 6 caracteres."
         }
 
@@ -222,12 +222,12 @@ def identify_user(payload: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
 
     if not supply:
         return "NEED_CUPS", {
-            "id_user": id_user,
+            "user_id": user_id,
             "message": "Ese CUPS no coincide con tus suministros. Dime los ultimos 6 caracteres correctos."
         }
 
     return "OK", {
-        "id_user": id_user,
-        "id_cups": supply.get("id_cups"),
+        "user_id": user_id,
+        "cups_id": supply.get("cups_id"),
         "dni_last4": dni_last4,
     }
