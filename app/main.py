@@ -19,9 +19,11 @@ from routers.billing.send_invoice import handle_send_invoice
 #Billing.Info
 from routers.billing.info import handle_check_account_status, handle_list_unpaid_invoices, handle_check_outstanding_amount
 
+# Info
+from routers.info.billing import handle_next_invoice_date
+
 from helpers.aux_functions import (
     identify_user,
-    periodo_a_texto,
     build_dialogflow_response,
     get_context_params,
     make_context,
@@ -288,17 +290,6 @@ def handle_business_intents(payload: Dict[str, Any], data: Dict[str, Any]) -> Op
     return build_dialogflow_response(output_msg, output_contexts=ctx)
 
 
-
-def handle_next_invoice_date(params: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
-    
-    today = datetime.now()
-    next_month = today.month + 1 if today.month < 12 else 1
-    year = today.year + (1 if next_month == 1 else 0)
-    month_name = datetime(year, next_month, 1)
-    text = f"La próxima fecha de emisión de factura es en {periodo_a_texto(month_name.strftime('%Y-%m'))}."
-    return text, params
-
-
 def handle_send_payment_link(params: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
     
     if not params.get("user_id"):
@@ -323,8 +314,7 @@ def handle_send_payment_link(params: Dict[str, Any], data: Dict[str, Any]) -> Di
 # Intent routing
 # -----------------------------
 INTENT_HANDLERS = {
-    "Billing.NextInvoiceDate": handle_next_invoice_date,
-    "Payments.SendLink": handle_send_payment_link,
+    "Info.NextInvoiceDate": handle_next_invoice_date,
     
     "Billing.Info.UnpaidInvoices": handle_list_unpaid_invoices,
     "Billing.Info.OutstandingAmount": handle_check_outstanding_amount,
@@ -332,6 +322,8 @@ INTENT_HANDLERS = {
     
     "Billing.SendInvoice.ByMonth": handle_send_invoice,
     "Billing.SendInvoice.Last": handle_send_invoice,
+    
+    "Payments.SendLink": handle_send_payment_link,
 }
 
 @app.post("/dialogflow/webhook")

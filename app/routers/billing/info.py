@@ -1,6 +1,5 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-from requests import session
 
 from helpers.aux_functions import (
     build_dialogflow_response,
