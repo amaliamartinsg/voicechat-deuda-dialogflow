@@ -13,7 +13,7 @@ app = FastAPI(title="Dialogflow ES Webhook - Billing Demo", version="1.0.0")
 
 DATA_PATH = os.getenv("BILLING_DATA_PATH", os.path.join(os.path.dirname(__file__), "data", "sample_data.json"))
 
-from routers.billing import handle_send_invoice
+from routers.billing.send_invoice import handle_send_invoice
 
 from helpers.aux_functions import (
     build_dialogflow_response,
@@ -39,14 +39,16 @@ def load_data() -> Dict[str, Any]:
         return json.load(f)
 
 
-# -----------------------------
-# Intent handlers
-# -----------------------------
+
 # -----------------------------
 # Business intents with pending action + identity
 # -----------------------------
-BUSINESS_INTENTS = {"ConsultarFactura", "ConsultarDeuda", "EnviarLinkPago"}
-IDENTITY_INTENTS = {"CapturarIdentidad", "Default Fallback Intent"}
+
+
+AUTH_INTENTS = {"Billing.CheckAccountStatus", "Billing.CheckOutstandingAmount", "Billing.NextInvoiceDate", "Billing.ListUnpaidInvoices",
+                "Billing.SendInvoice.ByMonth", "Billing.SendInvoice.Last",
+                "Payments.SendLink"}
+BUSINESS_INTENTS = {"Billing.SendInvoice.ByMonth"}
 
 MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 
@@ -164,33 +166,12 @@ def handle_business_intents(payload: Dict[str, Any], data: Dict[str, Any]) -> Op
                 "pending_action": intent,
                 "pending_params": pending_params,
                 "auth_level": "basic",
-                "dni_last4_letter": params.get("dni_last4_letter") or params.get("dni_last4") or state.get("dni_last4_letter") or state.get("dni_last4"),
-                "cups_last6": params.get("cups_last6") or state.get("cups_last6"),
+                "dni_last4": params.get("DNI") or params.get("dni_last4"),
+                "cups_last6": params.get("CUPS") or state.get("cups_last6"),
             }
             return build_state_response(ident.get("message", "Necesito mas datos para continuar."), updates)
 
         return execute_action(intent, params)
-
-    if intent in IDENTITY_INTENTS:
-        if pending_action and status == "OK":
-            return execute_action(pending_action, pending_params)
-        if status == "OK":
-            updates = {
-                "id_user": ident.get("id_user"),
-                "id_cups": ident.get("id_cups"),
-                "pending_action": pending_action or "",
-                "pending_params": pending_params or {},
-                "auth_level": "basic",
-            }
-            return build_state_response("Gracias, tengo tus datos. Como puedo ayudarte?", updates)
-
-        updates = {
-            "pending_action": pending_action or "",
-            "pending_params": pending_params or {},
-            "dni_last4_letter": params.get("dni_last4_letter") or state.get("dni_last4_letter"),
-            "cups_last6": params.get("cups_last6") or state.get("cups_last6"),
-        }
-        return build_state_response(ident.get("message", "Necesito tus datos para continuar."), updates)
 
     return None
 
@@ -318,11 +299,16 @@ INTENT_HANDLERS = {
 @app.post("/webhook")
 async def dialogflow_fulfillment(request: Request) -> JSONResponse:
     body = await request.json()
+    
+    print("\n\n\nBody recibido desde Dialogflow:", body)  # Esto lo verás en la consola
 
     session = body.get("session", "")
     query_result = body.get("queryResult", {}) or {}
     intent = (query_result.get("intent") or {}).get("displayName", "")
     params = query_result.get("parameters", {}) or {}
+
+    print("\n\nIntent detectado:", intent)
+    print("\nParámetros:", params)
 
     data = load_data()
 
@@ -359,4 +345,4 @@ def health():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, log_level="info", reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8008, log_level="info", reload=True)

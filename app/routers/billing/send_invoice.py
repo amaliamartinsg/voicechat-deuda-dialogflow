@@ -1,10 +1,14 @@
 from typing import Any, Dict, Optional
+import calendar
+import locale
+import datetime
 
 from helpers.aux_functions import (
     build_dialogflow_response,
     find_customer_by_dni_last4,
     format_eur,
     make_context,
+    periodo_a_texto
 )
 
 """ 
@@ -47,7 +51,7 @@ def _get_supply_for_user(data: Dict[str, Any], user_id: Any, cups_last6: Optiona
 
 
 def handle_send_invoice(session: str, params: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
-    dni = params.get("DNI") or params.get("dni_last4") or params.get("dni_last4_letter")
+    dni = params.get("DNI") or params.get("dni_last4")
     if not dni:
         ctx = [make_context(session, "awaiting_identity", 5)]
         return build_dialogflow_response(
@@ -84,14 +88,15 @@ def handle_send_invoice(session: str, params: Dict[str, Any], data: Dict[str, An
         if not invoice:
             return build_dialogflow_response("No tengo facturas disponibles para tu contrato.")
         period = invoice.get("period")
+
+        periodo_escrito = periodo_a_texto(period)
         mensaje = (
-            "Perfecto. A continuacion te reenviaremos la ultima factura disponible. "
-            "Por favor, revise su buzon en unos minutos."
+            f"Perfecto. A continuación te reenviaremos la última factura disponible. Es la factura correspondiente al periodo de {periodo_escrito}"
         )
 
     link = f"https://pagos.demo.local/factura/{invoice['invoice_id']}"
     total = format_eur(float(invoice["amount"]))
-    mensaje = f"{mensaje}\nImporte: {total}. Link: {link}"
+    mensaje = f"{mensaje}\n Link: {link}"
 
     ctx = [
         make_context(

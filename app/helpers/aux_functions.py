@@ -1,8 +1,32 @@
 from __future__ import annotations
 
-from datetime import datetime
 import re
+import locale
+from datetime import datetime
 from typing import Any, Dict, List, Optional
+
+
+
+# Convertir el periodo (YYYY-MM) a "mes de año" en español
+locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
+def periodo_a_texto(periodo):
+    
+    if not periodo or not isinstance(periodo, str) or not periodo[:7].replace("-", "").isdigit():
+        return periodo
+        
+    meses = [
+    "", "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+    ]
+    
+    try:
+        anio, mes = periodo.split("-")
+        mes_nombre = meses[int(mes)]
+        return f"{mes_nombre} de {anio}"
+    except Exception:
+        return periodo
+
+
 
 
 def find_customer_by_dni_last4(dni_last4: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -157,15 +181,21 @@ def identify_user(payload: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
     if id_user and id_cups:
         return "OK", {"id_user": id_user, "id_cups": id_cups}
 
-    dni = normalize_dni_partial(params.get("dni_last4_letter") or params.get("dni_last4") or params.get("DNI") or state.get("dni_last4_letter") or state.get("dni_last4"))
-    cups_last6 = normalize_cups_last6(params.get("cups_last6") or state.get("cups_last6"))
+    print("DNI parcial recibido:", params.get("DNI") or params.get("dni_last4"))
+    print("CUPS ultimos 6 recibido:", params.get("CUPS") or state.get("cups_last6"))
 
-    if not dni:
+    dni_last4 = normalize_dni_partial(params.get("DNI") or params.get("dni_last4"))
+    cups_last6 = normalize_cups_last6(params.get("CUPS") or state.get("cups_last6"))
+    
+    print("\n\nDNI parcial normalizado:", dni_last4)
+    print("CUPS ultimos 6 normalizado:", cups_last6)
+
+    if not dni_last4:
         return "NEED_DNI", {
             "message": "Para continuar necesito los ultimos 4 digitos y letra del DNI (ej: 5678Z)."
         }
 
-    customer = find_customer_by_dni_last4(dni, data)
+    customer = find_customer_by_dni_last4(dni_last4, data)
     if not customer:
         return "NEED_DNI", {
             "message": "No encuentro ese DNI parcial. Puedes revisarlo y repetirlo?"
@@ -175,7 +205,7 @@ def identify_user(payload: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
     supplies = [s for s in data.get("supplies", []) if s.get("user_id") == id_user]
 
     if len(supplies) == 1:
-        return "OK", {"id_user": id_user, "id_cups": supplies[0].get("id_cups"), "dni_last4_letter": dni}
+        return "OK", {"id_user": id_user, "id_cups": supplies[0].get("id_cups"), "dni_last4": dni_last4}
 
     if not cups_last6:
         return "NEED_CUPS", {
@@ -199,5 +229,5 @@ def identify_user(payload: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
     return "OK", {
         "id_user": id_user,
         "id_cups": supply.get("id_cups"),
-        "dni_last4_letter": dni,
+        "dni_last4": dni_last4,
     }
