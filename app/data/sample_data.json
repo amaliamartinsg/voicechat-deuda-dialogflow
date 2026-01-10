@@ -1,0 +1,204 @@
+{
+  "customers": [
+    {
+      "user_id": 1,
+      "full_name": "Alice García",
+      "email": "alice.garcia@example.com",
+      "account_dni": "12345678A",
+      "phone": "+34600111222",
+      "next_invoice_date": "2026-02-05"
+    },
+    {
+      "user_id": 2,
+      "full_name": "Bob Martínez",
+      "email": "bob.martinez@example.com",
+      "account_dni": "04567891B",
+      "phone": "+34600333444",
+      "next_invoice_date": "2026-02-10"
+    },
+    {
+      "user_id": 3,
+      "full_name": "Carla López",
+      "email": "carla.lopez@example.com",
+      "account_dni": "77889900C",
+      "phone": "+34600444555",
+      "next_invoice_date": "2026-02-08"
+    },
+    {
+      "user_id": 4,
+      "full_name": "Diego Sánchez",
+      "email": "diego.sanchez@example.com",
+      "account_dni": "11223344D",
+      "phone": "+34600666777",
+      "next_invoice_date": "2026-02-12"
+    },
+    {
+      "user_id": 5,
+      "full_name": "Elena Ruiz",
+      "email": "elena.ruiz@example.com",
+      "account_dni": "55667788E",
+      "phone": "+34600888999",
+      "next_invoice_date": "2026-02-06"
+    },
+    {
+      "user_id": 6,
+      "full_name": "Francisco Pérez",
+      "email": "francisco.perez@example.com",
+      "account_dni": "99887766F",
+      "phone": "+34600999000",
+      "next_invoice_date": "2026-02-09"
+    }
+  ],
+  "supplies": [
+    {
+      "id_cups": 101,
+      "user_id": 1,
+      "cups": "ES12A1B2C3D4E5F6G7",
+      "address": "C/ Mayor 10, Madrid",
+      "alias": "Casa"
+    },
+    {
+      "id_cups": 102,
+      "user_id": 1,
+      "cups": "ES34H7J8K9L0M1N2P3",
+      "address": "Av. Sol 25, Madrid",
+      "alias": "Oficina"
+    },
+
+    {
+      "id_cups": 201,
+      "user_id": 2,
+      "cups": "ES56Q1W2E3R4T5Y6U7",
+      "address": "C/ Toledo 5, Toledo",
+      "alias": "Vivienda"
+    },
+    {
+      "id_cups": 202,
+      "user_id": 2,
+      "cups": "ES78I9O0P1A2S3D4F5",
+      "address": "C/ Río 3, Toledo",
+      "alias": "Segunda residencia"
+    },
+
+    {
+      "id_cups": 301,
+      "user_id": 3,
+      "cups": "ES90G1H2J3K4L5Z6X7",
+      "address": "C/ Cervantes 12, Valencia",
+      "alias": "Piso"
+    },
+
+    {
+      "id_cups": 401,
+      "user_id": 4,
+      "cups": "ES11C2V3B4N5M6A7S8",
+      "address": "C/ Luna 7, Sevilla",
+      "alias": "Casa"
+    },
+    {
+      "id_cups": 402,
+      "user_id": 4,
+      "cups": "ES22D3F4G5H6J7K8L9",
+      "address": "C/ Triana 18, Sevilla",
+      "alias": "Local"
+    },
+    {
+      "id_cups": 403,
+      "user_id": 4,
+      "cups": "ES33Z9X8C7V6B5N4M3",
+      "address": "C/ Alameda 2, Sevilla",
+      "alias": "Garaje"
+    },
+
+    {
+      "id_cups": 501,
+      "user_id": 5,
+      "cups": "ES44P0O9I8U7Y6T5R4",
+      "address": "C/ Granada 9, Granada",
+      "alias": "Piso"
+    },
+    {
+      "id_cups": 502,
+      "user_id": 5,
+      "cups": "ES55L1K2J3H4G5F6D7",
+      "address": "C/ Sierra 4, Granada",
+      "alias": "Casa pueblo"
+    },
+
+    {
+      "id_cups": 601,
+      "user_id": 6,
+      "cups": "ES66Q7W8E9R0T1Y2U3",
+      "address": "C/ Marina 1, Barcelona",
+      "alias": "Vivienda"
+    },
+    {
+      "id_cups": 602,
+      "user_id": 6,
+      "cups": "ES77A8S9D0F1G2H3J4",
+      "address": "C/ Diagonal 100, Barcelona",
+      "alias": "Oficina"
+    }
+  ],
+  "invoices": [
+    { "invoice_id": "FAC-2025-001001", "user_id": 1, "cups": "ES12A1B2C3D4E5F6G7", "period": "2025-10", "issue_date": "2025-11-05", "due_date": "2025-11-20", "amount": 41.35, "status": "PAID" },
+    { "invoice_id": "FAC-2025-001002", "user_id": 1, "cups": "ES12A1B2C3D4E5F6G7", "period": "2025-11", "issue_date": "2025-12-05", "due_date": "2025-12-20", "amount": 52.10, "status": "PAID" },
+    { "invoice_id": "FAC-2025-001003", "user_id": 1, "cups": "ES12A1B2C3D4E5F6G7", "period": "2025-12", "issue_date": "2026-01-05", "due_date": "2026-01-20", "amount": 58.75, "status": "DUE" },
+    { "invoice_id": "FAC-2026-001004", "user_id": 1, "cups": "ES12A1B2C3D4E5F6G7", "period": "2026-01", "issue_date": "2026-02-05", "due_date": "2026-02-20", "amount": 49.90, "status": "OVERDUE" },
+
+    { "invoice_id": "FAC-2025-001005", "user_id": 1, "cups": "ES34H7J8K9L0M1N2P3", "period": "2025-10", "issue_date": "2025-11-06", "due_date": "2025-11-21", "amount": 73.20, "status": "PAID" },
+    { "invoice_id": "FAC-2025-001006", "user_id": 1, "cups": "ES34H7J8K9L0M1N2P3", "period": "2025-11", "issue_date": "2025-12-06", "due_date": "2025-12-21", "amount": 69.40, "status": "PAID" },
+    { "invoice_id": "FAC-2025-001007", "user_id": 1, "cups": "ES34H7J8K9L0M1N2P3", "period": "2025-12", "issue_date": "2026-01-06", "due_date": "2026-01-21", "amount": 80.15, "status": "DUE" },
+    { "invoice_id": "FAC-2026-001008", "user_id": 1, "cups": "ES34H7J8K9L0M1N2P3", "period": "2026-01", "issue_date": "2026-02-06", "due_date": "2026-02-21", "amount": 77.05, "status": "DUE" },
+
+    { "invoice_id": "FAC-2025-002001", "user_id": 2, "cups": "ES56Q1W2E3R4T5Y6U7", "period": "2025-10", "issue_date": "2025-11-05", "due_date": "2025-11-20", "amount": 46.80, "status": "PAID" },
+    { "invoice_id": "FAC-2025-002002", "user_id": 2, "cups": "ES56Q1W2E3R4T5Y6U7", "period": "2025-11", "issue_date": "2025-12-05", "due_date": "2025-12-20", "amount": 51.25, "status": "PAID" },
+    { "invoice_id": "FAC-2025-002003", "user_id": 2, "cups": "ES56Q1W2E3R4T5Y6U7", "period": "2025-12", "issue_date": "2026-01-05", "due_date": "2026-01-20", "amount": 62.10, "status": "PAID" },
+    { "invoice_id": "FAC-2026-002004", "user_id": 2, "cups": "ES56Q1W2E3R4T5Y6U7", "period": "2026-01", "issue_date": "2026-02-05", "due_date": "2026-02-20", "amount": 59.30, "status": "DUE" },
+
+    { "invoice_id": "FAC-2025-002005", "user_id": 2, "cups": "ES78I9O0P1A2S3D4F5", "period": "2025-10", "issue_date": "2025-11-06", "due_date": "2025-11-21", "amount": 38.90, "status": "PAID" },
+    { "invoice_id": "FAC-2025-002006", "user_id": 2, "cups": "ES78I9O0P1A2S3D4F5", "period": "2025-11", "issue_date": "2025-12-06", "due_date": "2025-12-21", "amount": 40.10, "status": "PAID" },
+    { "invoice_id": "FAC-2025-002007", "user_id": 2, "cups": "ES78I9O0P1A2S3D4F5", "period": "2025-12", "issue_date": "2026-01-06", "due_date": "2026-01-21", "amount": 44.55, "status": "DUE" },
+    { "invoice_id": "FAC-2026-002008", "user_id": 2, "cups": "ES78I9O0P1A2S3D4F5", "period": "2026-01", "issue_date": "2026-02-06", "due_date": "2026-02-21", "amount": 42.35, "status": "OVERDUE" },
+
+    { "invoice_id": "FAC-2025-003001", "user_id": 3, "cups": "ES90G1H2J3K4L5Z6X7", "period": "2025-10", "issue_date": "2025-11-07", "due_date": "2025-11-22", "amount": 57.80, "status": "PAID" },
+    { "invoice_id": "FAC-2025-003002", "user_id": 3, "cups": "ES90G1H2J3K4L5Z6X7", "period": "2025-11", "issue_date": "2025-12-07", "due_date": "2025-12-22", "amount": 60.25, "status": "PAID" },
+    { "invoice_id": "FAC-2025-003003", "user_id": 3, "cups": "ES90G1H2J3K4L5Z6X7", "period": "2025-12", "issue_date": "2026-01-07", "due_date": "2026-01-22", "amount": 63.40, "status": "DUE" },
+    { "invoice_id": "FAC-2026-003004", "user_id": 3, "cups": "ES90G1H2J3K4L5Z6X7", "period": "2026-01", "issue_date": "2026-02-07", "due_date": "2026-02-22", "amount": 61.10, "status": "DUE" },
+
+    { "invoice_id": "FAC-2025-004001", "user_id": 4, "cups": "ES11C2V3B4N5M6A7S8", "period": "2025-10", "issue_date": "2025-11-05", "due_date": "2025-11-20", "amount": 35.70, "status": "PAID" },
+    { "invoice_id": "FAC-2025-004002", "user_id": 4, "cups": "ES11C2V3B4N5M6A7S8", "period": "2025-11", "issue_date": "2025-12-05", "due_date": "2025-12-20", "amount": 39.20, "status": "PAID" },
+    { "invoice_id": "FAC-2025-004003", "user_id": 4, "cups": "ES11C2V3B4N5M6A7S8", "period": "2025-12", "issue_date": "2026-01-05", "due_date": "2026-01-20", "amount": 44.90, "status": "PAID" },
+    { "invoice_id": "FAC-2026-004004", "user_id": 4, "cups": "ES11C2V3B4N5M6A7S8", "period": "2026-01", "issue_date": "2026-02-05", "due_date": "2026-02-20", "amount": 42.15, "status": "DUE" },
+
+    { "invoice_id": "FAC-2025-004005", "user_id": 4, "cups": "ES22D3F4G5H6J7K8L9", "period": "2025-10", "issue_date": "2025-11-06", "due_date": "2025-11-21", "amount": 88.60, "status": "PAID" },
+    { "invoice_id": "FAC-2025-004006", "user_id": 4, "cups": "ES22D3F4G5H6J7K8L9", "period": "2025-11", "issue_date": "2025-12-06", "due_date": "2025-12-21", "amount": 91.40, "status": "PAID" },
+    { "invoice_id": "FAC-2025-004007", "user_id": 4, "cups": "ES22D3F4G5H6J7K8L9", "period": "2025-12", "issue_date": "2026-01-06", "due_date": "2026-01-21", "amount": 97.25, "status": "DUE" },
+    { "invoice_id": "FAC-2026-004008", "user_id": 4, "cups": "ES22D3F4G5H6J7K8L9", "period": "2026-01", "issue_date": "2026-02-06", "due_date": "2026-02-21", "amount": 95.10, "status": "OVERDUE" },
+
+    { "invoice_id": "FAC-2025-004009", "user_id": 4, "cups": "ES33Z9X8C7V6B5N4M3", "period": "2025-10", "issue_date": "2025-11-07", "due_date": "2025-11-22", "amount": 18.95, "status": "PAID" },
+    { "invoice_id": "FAC-2025-004010", "user_id": 4, "cups": "ES33Z9X8C7V6B5N4M3", "period": "2025-11", "issue_date": "2025-12-07", "due_date": "2025-12-22", "amount": 20.40, "status": "PAID" },
+    { "invoice_id": "FAC-2025-004011", "user_id": 4, "cups": "ES33Z9X8C7V6B5N4M3", "period": "2025-12", "issue_date": "2026-01-07", "due_date": "2026-01-22", "amount": 22.10, "status": "PAID" },
+    { "invoice_id": "FAC-2026-004012", "user_id": 4, "cups": "ES33Z9X8C7V6B5N4M3", "period": "2026-01", "issue_date": "2026-02-07", "due_date": "2026-02-22", "amount": 24.70, "status": "DUE" },
+
+    { "invoice_id": "FAC-2025-005001", "user_id": 5, "cups": "ES44P0O9I8U7Y6T5R4", "period": "2025-10", "issue_date": "2025-11-05", "due_date": "2025-11-20", "amount": 55.60, "status": "PAID" },
+    { "invoice_id": "FAC-2025-005002", "user_id": 5, "cups": "ES44P0O9I8U7Y6T5R4", "period": "2025-11", "issue_date": "2025-12-05", "due_date": "2025-12-20", "amount": 57.90, "status": "PAID" },
+    { "invoice_id": "FAC-2025-005003", "user_id": 5, "cups": "ES44P0O9I8U7Y6T5R4", "period": "2025-12", "issue_date": "2026-01-05", "due_date": "2026-01-20", "amount": 61.30, "status": "DUE" },
+    { "invoice_id": "FAC-2026-005004", "user_id": 5, "cups": "ES44P0O9I8U7Y6T5R4", "period": "2026-01", "issue_date": "2026-02-05", "due_date": "2026-02-20", "amount": 59.85, "status": "DUE" },
+
+    { "invoice_id": "FAC-2025-005005", "user_id": 5, "cups": "ES55L1K2J3H4G5F6D7", "period": "2025-10", "issue_date": "2025-11-06", "due_date": "2025-11-21", "amount": 33.10, "status": "PAID" },
+    { "invoice_id": "FAC-2025-005006", "user_id": 5, "cups": "ES55L1K2J3H4G5F6D7", "period": "2025-11", "issue_date": "2025-12-06", "due_date": "2025-12-21", "amount": 36.25, "status": "PAID" },
+    { "invoice_id": "FAC-2025-005007", "user_id": 5, "cups": "ES55L1K2J3H4G5F6D7", "period": "2025-12", "issue_date": "2026-01-06", "due_date": "2026-01-21", "amount": 39.40, "status": "PAID" },
+    { "invoice_id": "FAC-2026-005008", "user_id": 5, "cups": "ES55L1K2J3H4G5F6D7", "period": "2026-01", "issue_date": "2026-02-06", "due_date": "2026-02-21", "amount": 41.15, "status": "DUE" },
+
+    { "invoice_id": "FAC-2025-006001", "user_id": 6, "cups": "ES66Q7W8E9R0T1Y2U3", "period": "2025-10", "issue_date": "2025-11-05", "due_date": "2025-11-20", "amount": 47.55, "status": "PAID" },
+    { "invoice_id": "FAC-2025-006002", "user_id": 6, "cups": "ES66Q7W8E9R0T1Y2U3", "period": "2025-11", "issue_date": "2025-12-05", "due_date": "2025-12-20", "amount": 50.05, "status": "PAID" },
+    { "invoice_id": "FAC-2025-006003", "user_id": 6, "cups": "ES66Q7W8E9R0T1Y2U3", "period": "2025-12", "issue_date": "2026-01-05", "due_date": "2026-01-20", "amount": 53.60, "status": "DUE" },
+    { "invoice_id": "FAC-2026-006004", "user_id": 6, "cups": "ES66Q7W8E9R0T1Y2U3", "period": "2026-01", "issue_date": "2026-02-05", "due_date": "2026-02-20", "amount": 52.30, "status": "OVERDUE" },
+
+    { "invoice_id": "FAC-2025-006005", "user_id": 6, "cups": "ES77A8S9D0F1G2H3J4", "period": "2025-10", "issue_date": "2025-11-06", "due_date": "2025-11-21", "amount": 101.40, "status": "PAID" },
+    { "invoice_id": "FAC-2025-006006", "user_id": 6, "cups": "ES77A8S9D0F1G2H3J4", "period": "2025-11", "issue_date": "2025-12-06", "due_date": "2025-12-21", "amount": 98.10, "status": "PAID" },
+    { "invoice_id": "FAC-2025-006007", "user_id": 6, "cups": "ES77A8S9D0F1G2H3J4", "period": "2025-12", "issue_date": "2026-01-06", "due_date": "2026-01-21", "amount": 104.35, "status": "DUE" },
+    { "invoice_id": "FAC-2026-006008", "user_id": 6, "cups": "ES77A8S9D0F1G2H3J4", "period": "2026-01", "issue_date": "2026-02-06", "due_date": "2026-02-21", "amount": 99.95, "status": "DUE" }
+  ]
+}
