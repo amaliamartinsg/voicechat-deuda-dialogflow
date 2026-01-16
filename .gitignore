@@ -211,3 +211,5 @@ __marimo__/
 .venv_df/
 app/data/chatbot-deuda-b94e96363ba4.json
 app/audios/
+app/data/pdfs/FAQs_Energix (1).pdf
+app/data/pdfs/CONDICIONES_GENERALES.pdf

@@ -1,114 +1,113 @@
-# 📄 Chatbot Conversacional de Facturación Eléctrica
+# Chatbot Deuda (Dialogflow + Telegram + RAG)
 
-> **Importante:** Todos los datos utilizados en el proyecto son ficticios.
----
+Proyecto de demo para un asistente conversacional de facturacion electrica. El flujo actual usa Dialogflow ES para interpretar la intencion del usuario y un webhook en FastAPI para responder con datos deterministas (facturas y estado de cuenta). En paralelo, existe un pipeline RAG con Qdrant para responder preguntas informativas a partir de documentos.
 
-## 📌 Descripción General
+Este repositorio tambien incluye un bot de Telegram (texto y voz) que envia los mensajes a Dialogflow.
 
-Este proyecto implementa un chatbot conversacional de facturación eléctrica, diseñado para que el cliente pueda:
-- Consultar el estado de sus facturas
-- Saber si tiene importes pendientes de pago
-- Recibir información sobre la próxima factura
-- Obtener opciones para realizar el pago
+## Arquitectura (objetivo del prototipo)
 
-El chatbot está desarrollado con **Dialogflow ES** como motor conversacional y utiliza un **webhook simulado** para representar los datos de clientes y facturas. Además, incorpora un flujo de **RAG** (Retrieval Augmented Generation) para responder a preguntas informativas sobre métodos de pago, plazos y atención al cliente, a partir de documentación procesada mediante OCR.
+Flujo deseado:
 
-> **Nota:** El objetivo es demostrar un asistente conversacional end-to-end, no replicar un sistema real de facturación.
+1. Usuario escribe en Telegram.
+2. Bot de Telegram envía texto/voz a Dialogflow.
+3. Dialogflow detecta la intencion:
+   - Si NO requiere fulfillment: responde directo a Telegram.
+   - Si requiere fulfillment: llama a `POST /dialogflow/webhook`.
+4. El webhook resuelve:
+   - Respuesta determinista basada en datos (facturas, estado, etc.).
+   - O bien usa RAG para contestar con base en documentos en la base vectorial.
 
----
+Estado actual:
+- El webhook determinista esta implementado en `app/main.py`.
+- El RAG esta implementado en `app/src/agent/*` y `app/scripts/rag_indexer.py`, pero no esta expuesto como endpoint en FastAPI (hay un `rag_invoke` de prueba en `app/src/api/router.py`).
+- El bot de Telegram esta en `app/app.py`.
 
+## Componentes principales
 
-## 🎯 Objetivos del Chatbot
+- Webhook Dialogflow (FastAPI): `app/main.py`
+- Bot Telegram: `app/app.py`
+- RAG (LangChain + Qdrant): `app/src/agent/*`, `app/src/services/*`
+- Indexador de PDFs (OCR + embeddings): `app/scripts/rag_indexer.py`
+- Datos demo: `app/data/sample_data.json`
+- Configuracion Qdrant: `app/config/config.yaml`
 
-El chatbot permite al usuario:
+## Requisitos
 
-- Saber si está al corriente de pago
-- Conocer si tiene facturas pendientes
-- Consultar el importe total adeudado
-- Ver la fecha estimada de la próxima factura
-- Recibir información sobre cómo pagar una deuda
-- Solicitar el envío de un enlace de pago (simulado)
+- Python 3.11+
+- uv (recomendado)
+- Docker (para Qdrant)
+- Credenciales de Google Dialogflow (JSON)
+- Tesseract + Poppler (solo si haces OCR de PDFs en el indexador)
 
-Todo ello mediante una conversación natural y guiada, con soporte multi-turn.
+## Variables de entorno
 
----
+Crea un archivo `app/.env` (no subir a git) con los valores necesarios:
 
-## 🧩 Casos de Uso Incluidos
+- `TELEGRAM_BOT_TOKEN`
+- `DIALOGFLOW_PROJECT_ID`
+- `GOOGLE_APPLICATION_CREDENTIALS` (ruta al JSON de credenciales)
+- `OPENAI_API_KEY`
+- `QDRANT_URL` (por defecto `http://localhost:6333`)
+- `QDRANT_COLLECTION` (opcional)
+- `EMBEDDING_MODEL` (opcional, por defecto `sentence-transformers/all-MiniLM-L6-v2`)
+- `LLM_MODEL` (opcional, por defecto `gpt-4o-mini`)
+- `LLM_TEMPERATURE` (opcional)
+- `K_DOCS` / `THRESHOLD` (opcional)
+- `PYTHONPATH` (recomendado `app` para resolver imports)
 
-### 1️⃣ Consulta de estado de pago
-- El usuario puede preguntar si está al corriente de pago.
-	- **Ejemplo:**
-		- “¿Estoy al día con mis facturas?”
-	- **Respuesta esperada:**
-		- Sí, el cliente está al corriente
-		- No, el cliente tiene facturas pendientes (con resumen)
+## Ejecucion local con uv
 
-### 2️⃣ Consulta de facturas pendientes
-- El usuario puede conocer si tiene facturas sin pagar y obtener un resumen.
-	- **Información proporcionada:**
-		- Número de facturas pendientes
-		- Importe total adeudado
-		- Periodo e importe de cada factura (máx. 3)
+1. Instalar dependencias:
+```bash
+uv sync
+```
 
-### 3️⃣ Consulta de próxima factura
-- El chatbot informa de la fecha estimada de emisión de la próxima factura.
-	- **Ejemplo:**
-		- “¿Cuándo me llega la próxima factura?”
+2. Levantar Qdrant con Docker:
+```bash
+cd app
+docker-compose up -d
+```
 
-### 4️⃣ Información sobre métodos de pago (RAG)
-- El usuario puede preguntar cómo pagar una deuda.
-	- **Ejemplos:**
-		- “¿Cómo puedo pagar lo que debo?”
-		- “¿Puedo pagar por teléfono?”
-		- “¿Hay pago presencial?”
-	- Las respuestas se generan mediante RAG, a partir de documentación simulada (guías y FAQs).
+3. Ingesta de documentos para RAG (opcional):
+```bash
+uv run python app/scripts/rag_indexer.py
+```
 
-### 5️⃣ Envío de enlace de pago (simulado)
-- El usuario puede solicitar que se le envíe un enlace de pago.
-	- **Ejemplo:**
-		- “Envíame el enlace de pago por SMS”
-	- El sistema simula el envío y confirma la acción.
+4. Levantar el webhook de Dialogflow:
+```bash
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8008 --reload
+```
 
-### 6️⃣ Preguntas informativas adicionales (RAG)
-- El chatbot responde preguntas frecuentes como:
-		- Qué ocurre si se paga fuera de plazo
-		- Cuánto tarda en reflejarse un pago
-		- Canales de atención al cliente
-	- Estas respuestas no dependen de datos del cliente, sino de documentación indexada.
+5. Levantar el bot de Telegram:
+```bash
+uv run python app/app.py
+```
 
----
+## Ejecucion con Docker (pendiente de completar)
 
-## 🔐 Verificación de Identidad (Simulada)
+Hay un `app/docker-compose.yaml` que levanta Qdrant y una API, pero el `Dockerfile` de la API no esta en el repo. Para usar Docker end-to-end, necesitas agregar el `Dockerfile` esperado en `app/src/Dockerfile` o ajustar el compose. Mientras tanto, se recomienda levantar el API con `uvicorn` como se indica arriba.
 
-Para acceder a información sensible, el chatbot solicita:
-- Últimos 3 dígitos del DNI
-- Últimos 6 caracteres del CUPS
+## Endpoints
 
-Esta verificación es simulada y solo tiene fines demostrativos.
+- `POST /dialogflow/webhook` en `app/main.py`
+- `GET /health` para chequeo basico
 
----
+## Datos y flujo determinista
 
-## 🚫 Casos de Uso Excluidos (Fuera de Alcance)
+La logica determinista usa `app/data/sample_data.json` y requiere identificar al usuario por DNI parcial y CUPS. Se mantienen contextos de Dialogflow para pedir identidad y reintentar acciones pendientes.
 
-Para mantener el proyecto acotado, el chatbot **no gestiona**:
+## RAG
 
-- Desglose detallado de facturas
-- Cambios de tarifa, titularidad o potencia
-- Reclamaciones o incidencias
-- Fraccionamientos o refinanciaciones
-- Históricos completos de facturación
-- Múltiples contratos por cliente
+El indexador `app/scripts/rag_indexer.py`:
+- extrae texto de PDFs (si no hay texto embebido, usa OCR),
+- genera embeddings,
+- guarda chunks en Qdrant.
 
-Si el usuario solicita algo fuera de alcance, el bot ofrece una respuesta informativa o deriva a atención al cliente.
+La cadena RAG esta en `app/src/agent/chain.py` y los prompts en `app/src/agent/prompts.py`.
 
----
+## Notas y mejoras pendientes
 
-## 🛠️ Arquitectura y Componentes
+- Conectar el flujo RAG al webhook de Dialogflow para intenciones informativas.
+- Exponer un endpoint RAG real en FastAPI.
+- Completar Dockerfile para la API.
 
-- **Dialogflow** → entiende al usuario
-- **Webhook** → simula clientes y facturas
-- **DB simulada** → guarda datos ficticios
-- **OCR + embeddings** → indexa documentos
-- **Vector DB** → busca texto relevante
-- **LLM** → redacta respuestas
-- **Canal externo** → muestra la demo
