@@ -3,6 +3,7 @@ import scipy
 import whisper
 from markitdown import MarkItDown
 from transformers import VitsModel, AutoTokenizer
+import os
 
 WHISPER_MODEL = "turbo"
 AUDIO_FILE = "test.wav"
@@ -14,13 +15,17 @@ def text_to_speech(text):
 
     with torch.no_grad():
         output = model(**inputs).waveform
-        scipy.io.wavfile.write(AUDIO_FILE, 22050, output[0].cpu().numpy())
+        # Ensure the audios directory exists
+        audio_dir = os.path.join(os.path.dirname(__file__), "..", "audios")
+        os.makedirs(audio_dir, exist_ok=True)
+        audio_path = os.path.join(audio_dir, AUDIO_FILE)
+        scipy.io.wavfile.write(audio_path, 22050, output[0].cpu().numpy())
 
 
 def speech_to_text(audio_path):
     model = whisper.load_model(WHISPER_MODEL)
-    result = model.transcribe(audio_path, language="es")  # Especifica idioma para mejor precisión
-    return result["text"].strip()
+    result = model.transcribe(audio_path, language='es', fp16=False)
+    return result["text"]
 
 
 def use_markitdown(file_path):
