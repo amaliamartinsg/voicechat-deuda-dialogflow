@@ -1,0 +1,26 @@
+log_level: INFO #cómo va a hacer los loggings
+
+storage: #cómo va a guardar los datos
+  node_type: "Normal"  #porque no tenemos un cluster (solo queremos un nodo) - no tenemos alta disponibilidad, ni procesos grandes
+
+  performance:
+    max_search_threads: 0 # por defecto
+    optimizer_cpu_budget: 0 # por defecto
+
+  hnsw_index:
+    m: 16 # número de conexiones por nodo
+    ef_construct: 100 # número de vecinos a considerar en la construcción del grafo
+    full_scan_threshold_kb: 10000 # kb - si el tamaño de la colección es menor a este valor, se usará un escaneo completo en lugar del índice HNSW
+
+    collection:
+      quantization: null # sin cuantización -- cuántos de los vectores guardamos
+
+service:
+  host: 0.0.0.0
+  http_port: 6333
+  grpc_port: 6334
+
+cluster:
+  enabled: false # no queremos cluster
+
+telemetry_disabled: true # no queremos enviar datos de telemetría a Qdrant

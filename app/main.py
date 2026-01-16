@@ -4,7 +4,7 @@ import json
 import os
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -36,11 +36,9 @@ from helpers.aux_functions import (
 # Helpers: load data
 # -----------------------------
 
-
 def load_data() -> Dict[str, Any]:
     with open(DATA_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
-
 
 
 # -----------------------------
@@ -48,9 +46,11 @@ def load_data() -> Dict[str, Any]:
 # -----------------------------
 
 
-AUTH_INTENTS = {"Billing.Info.AccountStatus", "Billing.Info.CheckOutstandingAmount", "Billing.Info.NextInvoiceDate", "Billing.Info.ListUnpaidInvoices",
-                "Billing.SendInvoice.ByMonth", "Billing.SendInvoice.Last", "Billing.SendInvoice.Channel"
-                "Payments.SendLink"}
+AUTH_INTENTS = {
+            "Billing.Info.AccountStatus", "Billing.Info.CheckOutstandingAmount", "Billing.Info.NextInvoiceDate", "Billing.Info.ListUnpaidInvoices",
+            "Billing.SendInvoice.ByMonth", "Billing.SendInvoice.Last", "Billing.SendInvoice.Channel"
+            "Payments.SendLink"
+            }
 RETRY_INTENTS = {
     "Default.FeedBack.Negative",
 }
