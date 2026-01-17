@@ -290,16 +290,14 @@ def handle_send_payment_link(params: Dict[str, Any], data: Dict[str, Any]) -> Di
 # -----------------------------
 INTENT_HANDLERS = {
     "Info.NextInvoiceDate": handle_next_invoice_date,
-    
     "Billing.Info.UnpaidInvoices": handle_list_unpaid_invoices,
     "Billing.Info.OutstandingAmount": handle_check_outstanding_amount,
     "Billing.Info.AccountStatus": handle_check_account_status,
-    
     "Billing.SendInvoice.ByMonth": handle_send_invoice,
     "Billing.SendInvoice.Last": handle_send_invoice,
     "Billing.SendInvoice.Channel": handle_send_invoice,
-    
     "Payments.SendLink": handle_send_payment_link,
+    "Info.General": None,  # Se maneja aparte en el endpoint
 }
 
 
@@ -315,6 +313,25 @@ async def dialogflow_fulfillment(request: Request) -> JSONResponse:
     params = query_result.get("parameters", {}) or {}
 
     data = load_data()
+
+
+    # Lógica especial para Info.General: no requiere verificación, llama a RAG
+    if intent == "Info.General":
+        from src.rag.router import rag_invoke
+        # Se espera que la pregunta venga en params["question"], pero si no, usar queryText
+        question = params.get("question")
+        if not question:
+            question = query_result.get("queryText")
+        if not question:
+            return JSONResponse(content=build_dialogflow_response("No se recibió ninguna pregunta para responder."))
+        # Construimos un request RAGRequest con la pregunta
+        try:
+            rag_request = RAGRequest(question=question)
+            response = await rag_invoke(rag_request)
+            # Se asume que response.answer es el mensaje a devolver
+            return JSONResponse(content=build_dialogflow_response(response.answer))
+        except Exception as e:
+            return JSONResponse(content=build_dialogflow_response("Ocurrió un error al consultar el agente. Intenta de nuevo."))
 
     # New business intents with identity + pending action
     business_resp = handle_business_intents(body, data)

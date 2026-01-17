@@ -1,9 +1,7 @@
 import os
-import asyncio
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from google.cloud import dialogflow_v2 as dialogflow
-import io
 
 from dotenv import load_dotenv
 load_dotenv()

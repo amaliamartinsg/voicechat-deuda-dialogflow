@@ -1,3 +1,4 @@
+# Para STT con Whisper
 accelerate>=0.12.0
 scipy>=1.7.0
 torch>=2.0.1
@@ -16,4 +17,6 @@ numpy>=2.4.1
 tf_keras
 langchain-openai
 langchain-qdrant
-langchain-commiunity
+python-telegram
+python-telegram-bot
+google-cloud-dialogflow
