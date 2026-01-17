@@ -23,7 +23,7 @@ from routers.billing.info import handle_check_account_status, handle_list_unpaid
 from routers.info.billing import handle_next_invoice_date
 
 # RAG system
-from src.rag.router import RAGRequest, QueryResponse
+from src.rag.router import RAGRequest
 
 # Helpers
 from helpers.aux_functions import (
@@ -343,17 +343,13 @@ async def dialogflow_fulfillment(request: Request) -> JSONResponse:
         )
 
 
-@app.post("/rag/query", response_model=RAGRequest)
-async def rag_query(request: RAGRequest) -> QueryResponse:
+@app.post("/rag/query")
+async def rag_query(request: RAGRequest):
     from src.rag.router import rag_invoke
 
     response = await rag_invoke(request)
-    return QueryResponse(
-        question=response.question,
-        answer=response.answer,
-        sources=response.sources,
-        timestamp=response.timestamp
-    )
+    print(response.answer)
+    return response.answer
 
 @app.get("/health")
 def health():

@@ -17,17 +17,23 @@ async def rag_invoke(request: RAGRequest) -> QueryResponse:
         "threshold": threshold
     })
 
-    sources = [
-        SourceInfo(source=result["source"].selection, reason=result["source"].reason)
-    ] if result.get('source') else []
-
-
-    return QueryResponse(
-        question=result["question"],
-        answer=result["answer"],
-        sources=sources,
-        timestamp=datetime.now()
-    )
+    if result.get('source'):
+        sources = [
+            SourceInfo(source=result["source"].selection, reason=result["source"].reason)
+        ]
+        return QueryResponse(
+            question=result["question"],
+            answer=result["answer"],
+            sources=sources,
+            timestamp=datetime.now()
+        )
+    else:
+        return QueryResponse(
+            question=result["question"],
+            answer=result["answer"],
+            sources=[],
+            timestamp=datetime.now()
+        )
 
 
 
