@@ -2,29 +2,27 @@
 
 ## 1. Resumen ejecutivo
 
-Este proyecto implementa un prototipo de asistente conversacional para consultas de facturacion electrica. El sistema se apoya en Dialogflow ES para interpretar intenciones y un webhook en FastAPI para responder con datos deterministas (estado de cuenta, facturas y pagos). En paralelo, se ha preparado un flujo RAG (Retrieval Augmented Generation) con Qdrant que permite responder preguntas informativas basadas en documentos.
+Este proyecto implementa un prototipo de asistente conversacional para consultas de facturación eléctrica. El sistema se apoya en Dialogflow ES para interpretar intenciones y un webhook en FastAPI para responder en los casos en los que se necesite mayor información. El webhook permite redirigir (en función de la intención interpretada) a dos caminos diferentes: uno con datos deterministas (estado de cuenta, facturas y pagos) en el caso de preguntas concretas sobre sus suministros o contratos activos. En paralelo, se ha preparado un flujo RAG (Retrieval Augmented Generation) con Qdrant que permite responder preguntas informativas basadas en documentos generales de la empresa.
 
-El objetivo final es un servicio conectado a Telegram: el usuario escribe o envia audio, Dialogflow interpreta la intencion y decide si necesita fulfillment. Si no lo necesita, responde directamente; si lo necesita, el webhook realiza la logica de negocio determinista o deriva a RAG cuando proceda.
+El objetivo final es un servicio conectado a Telegram: el usuario escribe o envía audio, Dialogflow interpreta la intención y decide si necesita fulfillment (llamada al webhook). Si no lo necesita, responde directamente con una respuesta aletaoria de una batería propuesta de respuestas; si lo necesita, el webhook realiza la lógica de negocio determinista o deriva a RAG cuando proceda.
 
 ## 2. Alcance y objetivos
 
 ### Objetivos funcionales
 
-- Consultas de estado de pago.
-- Listado de facturas pendientes y total adeudado.
-- Fecha estimada de proxima factura.
-- Envio de factura (simulado) por canal.
-- Envio de enlace de pago (simulado).
-- Respuestas informativas sobre pagos, condiciones y atencion (via RAG).
+ - Consultas de estado de pago.
+ - Listado de facturas pendientes y total adeudado.
+ - Fecha estimada de próxima factura.
+ - Envío de factura (simulado) por canal.
+ - Envío de enlace de pago (simulado).
+ - Respuestas informativas sobre pagos, condiciones y atención (vía RAG).
 
-### Fuera de alcance (prototipo)
-
-- Desglose detallado de facturas.
-- Cambios contractuales (tarifa, potencia, titularidad).
-- Reclamaciones o incidencias.
-- Refinanciaciones o historicos completos.
 
 ## 3. Arquitectura de alto nivel
+
+
+Esquema general:
+![Esquema de arquitectura](arquitecture.png)
 
 Flujo deseado del prototipo:
 
@@ -68,20 +66,37 @@ Archivo: `app/main.py`
 - Endpoint `POST /dialogflow/webhook`.
 - Identificacion del usuario por DNI parcial y CUPS.
 - Contextos de Dialogflow para pedir identidad y reintentar acciones.
-- Intents actuales:
-  - `Billing.Info.AccountStatus`
-  - `Billing.Info.UnpaidInvoices`
-  - `Billing.Info.OutstandingAmount`
-  - `Billing.SendInvoice.*`
-  - `Info.NextInvoiceDate`
-  - `Payments.SendLink`
+Intents actuales:
+
+**Manejados por el webhook:**
+  **- Respuesta determinista**
+   - `Auth.ProvideIdentity`
+   - `Billing.Info.AccountStatus`
+   - `Billing.Info.OutstandingAmount`
+   - `Billing.Info.UnpaidInvoices`
+   - `Billing.SendInvoice.ByMonth`
+   - `Billing.SendInvoice.Channel`
+   - `Billing.SendInvoice.Last`
+   - `Info.NextInvoiceDate`
+   - `Payments.SendLink`
+   
+   **- Respuesta modelo de lenguaje**
+   - `Info.General`
+
+**Respuesta directa en Dialogflow:**
+   - `Default.WelcomeIntent`
+   - `Default.Fallback`
+   - `Default.FeedBack.Possitive`
+   - `Default.FeedBack.Negative`
+   - `Payments.Options`
+   - `Support.HumanHandoff`
 
 ### 5.2. Bot Telegram
 
 Archivo: `app/app.py`
 
 - Procesa texto y voz.
-- Envia mensajes a Dialogflow con `detect_intent`.
+- envía mensajes a Dialogflow con `detect_intent`.
 - Responde al usuario con `fulfillment_text`.
 - Incluye STT con Whisper y TTS opcional.
 
@@ -93,7 +108,7 @@ Archivos:
 - `app/src/agent/prompts.py`: prompts de sistema.
 - `app/src/services/embeddings.py`: embeddings (HuggingFace).
 - `app/src/services/llms.py`: LLM via `ChatOpenAI`.
-- `app/src/services/vector_store.py`: conexion con Qdrant.
+- `app/src/services/vector_store.py`: conexin con Qdrant.
 
 Indexado:
 
@@ -105,60 +120,3 @@ Indexado:
 - Base vectorial: Qdrant.
 - Embeddings: `sentence-transformers/all-MiniLM-L6-v2` por defecto.
 - LLM: `gpt-4o-mini` por defecto.
-
-## 7. Configuracion y despliegue
-
-### 7.1. Variables de entorno
-
-Recomendadas:
-
-- `TELEGRAM_BOT_TOKEN`
-- `DIALOGFLOW_PROJECT_ID`
-- `GOOGLE_APPLICATION_CREDENTIALS`
-- `OPENAI_API_KEY`
-- `QDRANT_URL`
-- `QDRANT_COLLECTION`
-- `EMBEDDING_MODEL`
-- `LLM_MODEL`
-- `LLM_TEMPERATURE`
-- `K_DOCS`, `THRESHOLD`
-- `PYTHONPATH=app`
-
-### 7.2. Ejecucion con uv
-
-```bash
-uv sync
-cd app
-docker-compose up -d
-uv run python app/scripts/rag_indexer.py
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8008 --reload
-uv run python app/app.py
-```
-
-### 7.3. Docker
-
-Existe `app/docker-compose.yaml` para Qdrant y una API, pero falta el Dockerfile de la API. Se debe agregar o ajustar el compose para un despliegue completo en contenedores.
-
-## 8. Seguridad y privacidad
-
-- Las claves (`TELEGRAM_BOT_TOKEN`, `OPENAI_API_KEY`, etc.) no deben versionarse.
-- El prototipo usa datos ficticios en `sample_data.json`.
-- El endpoint de webhook no incluye autenticacion (entorno demo).
-
-## 9. Pruebas y validacion
-
-Recomendaciones:
-
-- Probar intents deterministas con Dialogflow simulator.
-- Validar flujo de identidad (DNI/CUPS).
-- Verificar conexion a Qdrant e ingesta de PDFs.
-- Probar bot en Telegram con texto y audio.
-
-## 10. Roadmap sugerido
-
-1. Integrar el RAG dentro del webhook segun intencion detectada.
-2. Exponer endpoint RAG en FastAPI.
-3. Completar Dockerfile y pipeline de despliegue.
-4. Instrumentar logs y metricas.
-5. Añadir tests basicos de intents y RAG.
-
