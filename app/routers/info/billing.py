@@ -21,3 +21,5 @@ def handle_next_invoice_date(params: Dict[str, Any], data: Dict[str, Any]) -> Di
     month_name = datetime(year, next_month, 1)
     text = f"La próxima fecha de emisión de factura es en {periodo_a_texto(month_name.strftime('%Y-%m'))}."
     return text, params
+
+# def handle_

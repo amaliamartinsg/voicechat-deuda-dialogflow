@@ -16,5 +16,5 @@ class QueryResponse(BaseModel):
 class RAGRequest(BaseModel):
     """Modelo para la petición de consulta"""
     question: str = Field(..., description="Pregunta para el agente RAG")
-    k_docs: Optional[int] = Field(default=None, description="Número de documentos a recuperar", ge=1)
-    threshold: Optional[float] = Field(default=None, description="Umbral de puntuación para filtrar documentos", ge=0.0, le=1.0)
+    k_docs: Optional[int] = Field(default=5, description="Número de documentos a recuperar", ge=1)
+    threshold: Optional[float] = Field(default=0.82, description="Umbral de puntuación para filtrar documentos", ge=0.0, le=1.0)

@@ -22,6 +22,10 @@ from routers.billing.info import handle_check_account_status, handle_list_unpaid
 # Info
 from routers.info.billing import handle_next_invoice_date
 
+# RAG system
+from src.rag.router import RAGRequest, QueryResponse
+
+# Helpers
 from helpers.aux_functions import (
     identify_user,
     build_dialogflow_response,
@@ -58,35 +62,6 @@ RETRY_INTENTS = {
 MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 
 
-def normalize_month(value: Any) -> Any:
-    if value is None:
-        return None
-    value = str(value).strip()
-    if MONTH_RE.match(value):
-        return value
-    return None
-
-
-def get_supply_by_id(data: Dict[str, Any], cups_id: Any) -> Optional[Dict[str, Any]]:
-    for s in data.get("supplies", []):
-        if s.get("cups_id") == cups_id:
-            return s
-    return None
-
-
-def find_invoice_for_period(data: Dict[str, Any], user_id: Any, cups: Optional[str], period: str) -> Optional[Dict[str, Any]]:
-    for inv in data.get("invoices", []):
-        if inv.get("user_id") == user_id and inv.get("cups") == cups and inv.get("period") == period:
-            return inv
-    return None
-
-
-def calc_debt_for_supply(data: Dict[str, Any], user_id: Any, cups: Optional[str]) -> float:
-    total = 0.0
-    for inv in data.get("invoices", []):
-        if inv.get("user_id") == user_id and inv.get("cups") == cups and inv.get("status") in ("DUE", "OVERDUE"):
-            total += float(inv.get("amount", 0) or 0)
-    return total
 
 def execute_intent_handler(payload: Dict[str, Any], data: Dict[str, Any], intent_name: str, handler_params: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -327,6 +302,7 @@ INTENT_HANDLERS = {
     "Payments.SendLink": handle_send_payment_link,
 }
 
+
 @app.post("/dialogflow/webhook")
 async def dialogflow_fulfillment(request: Request) -> JSONResponse:
     body = await request.json()
@@ -365,6 +341,19 @@ async def dialogflow_fulfillment(request: Request) -> JSONResponse:
             ),
             status_code=200,
         )
+
+
+@app.post("/rag/query", response_model=RAGRequest)
+async def rag_query(request: RAGRequest) -> QueryResponse:
+    from src.rag.router import rag_invoke
+
+    response = await rag_invoke(request)
+    return QueryResponse(
+        question=response.question,
+        answer=response.answer,
+        sources=response.sources,
+        timestamp=response.timestamp
+    )
 
 @app.get("/health")
 def health():

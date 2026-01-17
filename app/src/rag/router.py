@@ -1,20 +1,13 @@
 
 from datetime import datetime
 
-from src.api.schema import RAGRequest, QueryResponse, SourceInfo
+from src.rag.schema import RAGRequest, QueryResponse, SourceInfo
 from src.agent.chain import rag_chain
 
 from config.project_config import SETTINGS
 
 
-collection_name = SETTINGS.qdrant_collection
-qdrant_client = SETTINGS.qdrant_client
-
-
 async def rag_invoke(request: RAGRequest) -> QueryResponse:
-    """
-    Endpoint para la consulta RAG utilizando LangChain.
-    """
     k = request.k_docs if request.k_docs is not None else SETTINGS.k_docs
     threshold = request.threshold if request.threshold is not None else SETTINGS.threshold
 
@@ -37,24 +30,15 @@ async def rag_invoke(request: RAGRequest) -> QueryResponse:
     )
 
 
-# Bloque de prueba para ejecución directa
+
 if __name__ == "__main__":
     import asyncio
-    from src.api.schema import RAGRequest
 
-    async def test_rag_invoke():
-        request = RAGRequest(
-            question="¿Cómo me cambio a Energix?",
-            k_docs=3,
-            threshold=0.5
-        )
-        response = await rag_invoke(request)
-        print(response)
-        print("Pregunta:", response.question)
-        print("Respuesta:", response.answer)
-        print("Sources:", response.sources)
-        print("Timestamp:", response.timestamp)
+    test_request = RAGRequest(
+        question="¿Cuál es el importe de mi última factura?",
+        k_docs=3,
+        threshold=0.8
+    )
 
-    asyncio.run(test_rag_invoke())
-    
-    
+    response = asyncio.run(rag_invoke(test_request))
+    print(response)

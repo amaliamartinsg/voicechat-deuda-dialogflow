@@ -42,7 +42,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Comando /start"""
     await update.message.reply_text(
         "¡Hola! Soy tu asistente conversacional. "
-        "Puedes escribirme o enviarme notas de voz. 🎤"
+        "Puedes escribirme o enviarme notas de voz."
     )
 
 
