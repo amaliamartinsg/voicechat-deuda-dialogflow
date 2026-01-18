@@ -4,7 +4,7 @@ FROM python:3.12-slim
 WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app/src
+ENV PYTHONPATH=/app:/app
 
 COPY ./requirements.txt .
 
@@ -12,9 +12,11 @@ COPY ./requirements.txt .
 RUN pip install --no-cache-dir uv && \
 	pip install --no-cache-dir -r requirements.txt
 
-COPY src/ ./src/
-COPY config/ ./config/
+COPY main.py ./
 COPY data/ ./data/
+COPY src/ ./src/
+COPY routers/ ./routers/
+COPY config/ ./config/
 COPY helpers/ ./helpers/
 
 EXPOSE 8008

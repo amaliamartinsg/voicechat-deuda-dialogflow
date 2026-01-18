@@ -3,14 +3,14 @@ version: '3.8'
 services:
   qdrant:
     image: qdrant/qdrant:latest
-    container_name: qdrant_vector_db
-    command: "./qdrant --config-path app/config/config.yaml"
+    container_name: qdrant_vectordb
+    command: "./qdrant --config-path config/config.yaml"
     ports:
       - "6333:6333"
       - "6334:6334"
     volumes:
       - qdrant_storage:/qdrant/storage
-      - ./qdrant_config/config.yaml:app/config/config.yaml
+      - ./qdrant_config/config.yaml:/config/config.yaml
     restart: always
     networks:
       - dialogflow-rag-network
@@ -27,11 +27,8 @@ services:
       - QDRANT_URL=http://qdrant:6333
       - PYTHONUNBUFFERED=1
     volumes:
-      - ../src:/app/src
-      - ../config:/app/config
-      - ../data:/app/data
-      - ../helpers:/app/helpers
-      - ../logs:/app/logs
+      - ./config:/app/config
+      - ./data:/app/data
     depends_on:
       - qdrant
     restart: always
