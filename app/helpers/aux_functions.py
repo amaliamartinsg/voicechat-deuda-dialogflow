@@ -7,7 +7,11 @@ from typing import Any, Dict, List, Optional
 
 
 # Convertir el periodo (YYYY-MM) a "mes de año" en español
-locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
+try:
+    locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
+except locale.Error:
+    # Fallback to default locale if not available
+    locale.setlocale(locale.LC_TIME, "C")
 def periodo_a_texto(periodo):
     
     if not periodo or not isinstance(periodo, str) or not periodo[:7].replace("-", "").isdigit():
