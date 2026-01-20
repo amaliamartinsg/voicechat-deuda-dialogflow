@@ -1,4 +1,5 @@
 import os
+import traceback
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from google.cloud import dialogflow_v2 as dialogflow
@@ -99,7 +100,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         voice = await update.message.voice.get_file()
         audio_bytes = await voice.download_as_bytearray()
         print(f"✅ Audio descargado: {len(audio_bytes)} bytes")
-        
+
         # 2. Convertir audio a texto (STT)
         await update.message.chat.send_action(action="typing")
         
@@ -109,9 +110,10 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         os.makedirs(audio_dir, exist_ok=True)
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".ogg", dir=audio_dir)
         temp_file.write(bytes(audio_bytes))
-        temp_file.close()  # IMPORTANTE: Cerrar antes de que Whisper lo use
-        temp_audio_path = temp_file.name
-        
+        temp_file.close()
+        temp_audio_path = os.path.join(audio_dir, temp_file.name)
+        print("Guardando archivo temporal en:", temp_audio_path)
+
         try:
             user_text = speech_to_text(temp_audio_path)
         finally:
@@ -135,26 +137,36 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         
         response_text = query_result.fulfillment_text
+
+        print(f"[DF] Respuesta: {response_text}")
         
         if not response_text:
             response_text = "Lo siento, no he entendido tu consulta."
-        
-        # 4. Enviar respuesta en texto
-        await update.message.reply_text(f"🎤 Has dicho: _{user_text}_\n\n{response_text}", parse_mode="Markdown")
-        
-        # 5. OPCIONAL: Enviar también como audio (TTS)
-        # Descomenta estas líneas si quieres respuesta en voz
-        """
+
+        # 4. Enviar respuesta en audio (TTS)
         await update.message.chat.send_action(action="upload_audio")
-        audio_respuesta = convertir_texto_a_audio(response_text)
-        await update.message.reply_voice(
-            voice=io.BytesIO(audio_respuesta),
-            caption="Respuesta en audio"
-        )
-        """
-        
+        try:
+            text_to_speech(response_text)
+            audio_path = os.path.join(audio_dir, "test.wav")
+            with open(audio_path, "rb") as audio_file:
+                await update.message.reply_voice(
+                    voice=audio_file,
+                    caption="Respuesta en audio"
+                )
+        except Exception as tts_error:
+            print(f"Error generando o enviando audio: {tts_error}")
+            await update.message.reply_text("No se pudo generar la respuesta en audio.")
+        finally:
+            # Intentar borrar el archivo de audio generado
+            try:
+                if os.path.exists(audio_path):
+                    os.remove(audio_path)
+            except Exception as audio_rm_error:
+                print(f"⚠️ No se pudo eliminar test.wav: {audio_rm_error}")
+
     except Exception as e:
         print(f"Error en handle_voice: {e}")
+        traceback.print_exc()
         await update.message.reply_text(
             "Ha ocurrido un error procesando tu audio. Inténtalo de nuevo."
         )
