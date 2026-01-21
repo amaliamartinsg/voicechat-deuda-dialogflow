@@ -12,6 +12,7 @@ source_selection_prompt = PromptTemplate.from_template(
     - pagos: Información y métodos de pago.
     - condiciones_generales: Condiciones generales de la compañía.
     - otros_servicios: Otras consultas relacionadas con los servicios de Energix.
+    - alta_suministro: Proceso y requisitos para dar de alta un suministro eléctrico.
 
     Esta es la pregunta para tu selección de fuente de conocimiento:
     {question}
@@ -26,6 +27,7 @@ none_selection_prompt = PromptTemplate.from_template(
     - pagos: Información y métodos de pago.
     - condiciones_generales: Condiciones generales de la compañía.
     - otros_servicios: Otras consultas relacionadas con los servicios de Energix.
+    - alta_suministro: Proceso y requisitos para dar de alta un suministro eléctrico.
 
     Si la pregunta no está relacionada con estas categorías, responde amablemente recordando al usuario que solo puedes responder preguntas sobre los servicios y temas de Energix.
 
